@@ -50,7 +50,7 @@ class MockSearchClient:
 
 
 # ---------------------------------------------------------------------------
-# PR1 Tests — Semantic Conventions
+# Tests — Semantic Conventions
 # ---------------------------------------------------------------------------
 
 class TestSemanticConventions:
@@ -103,7 +103,7 @@ class TestSemanticConventions:
 
 
 # ---------------------------------------------------------------------------
-# PR2 Tests — SearchClient instrumentation via manual spans
+# Tests — SearchClient instrumentation via manual spans
 # ---------------------------------------------------------------------------
 
 class TestSearchClientInstrumentation:
