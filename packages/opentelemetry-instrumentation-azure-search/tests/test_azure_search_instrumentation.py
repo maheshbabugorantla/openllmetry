@@ -1,4 +1,4 @@
-"""Tests for Azure AI Search instrumentation — PR1: semconv + scaffold."""
+"""Tests for Azure AI Search instrumentation — semconv + scaffold."""
 
 from opentelemetry.semconv_ai import SpanAttributes
 from opentelemetry.instrumentation.azure_search import AzureSearchInstrumentor
