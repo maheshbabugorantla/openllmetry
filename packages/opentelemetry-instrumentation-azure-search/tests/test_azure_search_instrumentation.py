@@ -501,7 +501,7 @@ class TestDontThrow:
 
 
 # ---------------------------------------------------------------------------
-# PR3 Tests — Async + SearchIndexClient
+# Tests — Async + SearchIndexClient
 # ---------------------------------------------------------------------------
 
 class MockSearchIndex:
