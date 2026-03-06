@@ -34,6 +34,7 @@ from traceloop.sdk.instruments import Instruments
 from traceloop.sdk.tracing.content_allow_list import ContentAllowList
 from traceloop.sdk.utils import is_notebook
 from traceloop.sdk.utils.package_check import is_package_installed
+from traceloop.sdk.utils.instrumentation_warnings import warn_missing_instrumentation
 from typing import Callable, Dict, List, Optional, Set, Union
 from opentelemetry.semconv._incubating.attributes.gen_ai_attributes import (
     GEN_AI_AGENT_NAME,
@@ -499,6 +500,9 @@ def init_instrumentations(
             if init_anthropic_instrumentor(
                 should_enrich_metrics, base64_image_uploader
             ):
+                instrument_set = True
+        elif instrument == Instruments.AZURE_SEARCH:
+            if init_azure_search_instrumentor():
                 instrument_set = True
         elif instrument == Instruments.BEDROCK:
             if init_bedrock_instrumentor(should_enrich_metrics):
@@ -1042,6 +1046,20 @@ def init_alephalpha_instrumentor():
             return True
     except Exception as e:
         logging.error(f"Error initializing Aleph Alpha instrumentor: {e}")
+    return False
+
+
+def init_azure_search_instrumentor():
+    try:
+        if is_package_installed("azure-search-documents"):
+            from opentelemetry.instrumentation.azure_search import AzureSearchInstrumentor
+
+            instrumentor = AzureSearchInstrumentor()
+            if not instrumentor.is_instrumented_by_opentelemetry:
+                instrumentor.instrument()
+            return True
+    except Exception as e:
+        logging.error(f"Error initializing Azure Search instrumentor: {e}")
     return False
 
 
