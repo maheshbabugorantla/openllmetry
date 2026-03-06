@@ -557,6 +557,14 @@ class MockSearchIndex:
         self.fields = fields or []
 
 
+class MockSynonymMap:
+    """Mock SynonymMap for testing."""
+
+    def __init__(self, name, synonyms=None):
+        self.name = name
+        self.synonyms = synonyms or []
+
+
 class MockServiceCounters:
     """Mock service counters for get_service_statistics response."""
 
@@ -605,6 +613,24 @@ class MockSearchIndexClient:
 
     def list_index_names(self, **kwargs):
         return iter(["index1", "index2"])
+
+    def create_synonym_map(self, synonym_map, **kwargs):
+        return synonym_map
+
+    def create_or_update_synonym_map(self, synonym_map, **kwargs):
+        return synonym_map
+
+    def delete_synonym_map(self, name, **kwargs):
+        return None
+
+    def get_synonym_map(self, name, **kwargs):
+        return MockSynonymMap(name=name, synonyms=["hotel,motel", "cozy,comfortable"])
+
+    def get_synonym_maps(self, **kwargs):
+        return [MockSynonymMap(name="sm1"), MockSynonymMap(name="sm2")]
+
+    def get_synonym_map_names(self, **kwargs):
+        return ["sm1", "sm2"]
 
 
 class TestSearchIndexClientInstrumentation:
@@ -2701,3 +2727,474 @@ class TestAsyncWorkflows:
         assert search_spans[0].status.status_code == StatusCode.ERROR
         assert "ServiceUnavailable" in search_spans[0].status.description
         assert search_spans[1].status.status_code == StatusCode.OK
+
+
+# Tests — Indexer, Synonym Maps, BufferedSender
+
+
+class TestSynonymMapInstrumentation:
+    """Tests for synonym map CRUD operations."""
+
+    def test_create_synonym_map_span(self, exporter):
+        """Test create_synonym_map creates span with synonym_map_name."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_synonym_map_attributes,
+        )
+        from opentelemetry import trace
+
+        sm = MockSynonymMap(name="my-synonyms", synonyms=["hotel,motel", "cozy,comfortable"])
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.create_synonym_map") as span:
+            _set_synonym_map_attributes(span, "create_synonym_map", (sm,), {})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "my-synonyms"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT) == 2
+
+    def test_create_or_update_synonym_map_span(self, exporter):
+        """Test create_or_update_synonym_map creates span with synonym_map_name."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_synonym_map_attributes,
+        )
+        from opentelemetry import trace
+
+        sm = MockSynonymMap(name="updated-synonyms", synonyms=["big,large", "small,tiny", "fast,quick"])
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.create_or_update_synonym_map") as span:
+            _set_synonym_map_attributes(span, "create_or_update_synonym_map", (), {"synonym_map": sm})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "updated-synonyms"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT) == 3
+
+    def test_delete_synonym_map_span(self, exporter):
+        """Test delete_synonym_map creates span with synonym_map_name from string arg."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_synonym_map_attributes,
+        )
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.delete_synonym_map") as span:
+            _set_synonym_map_attributes(span, "delete_synonym_map", ("my-synonyms",), {})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "my-synonyms"
+
+    def test_get_synonym_map_span(self, exporter):
+        """Test get_synonym_map creates span with synonym_map_name from kwarg."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_synonym_map_attributes,
+        )
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.get_synonym_map") as span:
+            _set_synonym_map_attributes(span, "get_synonym_map", (), {"name": "my-synonyms"})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "my-synonyms"
+
+    def test_get_synonym_maps_span(self, exporter):
+        """Test get_synonym_maps creates span with correct span name."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_synonym_map_attributes,
+        )
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.get_synonym_maps") as span:
+            _set_synonym_map_attributes(span, "get_synonym_maps", (), {})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.get_synonym_maps"
+
+    def test_get_synonym_map_names_span(self, exporter):
+        """Test get_synonym_map_names creates span with correct span name."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_synonym_map_attributes,
+        )
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.get_synonym_map_names") as span:
+            _set_synonym_map_attributes(span, "get_synonym_map_names", (), {})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.get_synonym_map_names"
+
+    def test_create_synonym_map_synonyms_count(self, exporter):
+        """Test create_synonym_map extracts synonyms_count from SynonymMap.synonyms list."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_synonym_map_attributes,
+        )
+        from opentelemetry import trace
+
+        sm = MockSynonymMap(name="test", synonyms=["a,b", "c,d", "e,f", "g,h"])
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.create_synonym_map") as span:
+            _set_synonym_map_attributes(span, "create_synonym_map", (sm,), {})
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT) == 4
+
+    def test_synonym_map_with_positional_args(self, exporter):
+        """Test synonym map with positional args works correctly."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_synonym_map_attributes,
+        )
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.get_synonym_map") as span:
+            _set_synonym_map_attributes(span, "get_synonym_map", ("positional-name",), {})
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "positional-name"
+
+    def test_delete_synonym_map_with_object_arg(self, exporter):
+        """Test delete_synonym_map handles SynonymMap object passed instead of string."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_synonym_map_attributes,
+        )
+        from opentelemetry import trace
+
+        sm = MockSynonymMap(name="object-synonym-map")
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.delete_synonym_map") as span:
+            _set_synonym_map_attributes(span, "delete_synonym_map", (sm,), {})
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "object-synonym-map"
+
+
+class TestServiceStatisticsInstrumentation:
+    """Tests for get_service_statistics instrumentation."""
+
+    def test_service_statistics_response_attributes(self, exporter):
+        """Test get_service_statistics extracts document_count and index_count."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_service_statistics_response_attributes,
+        )
+        from opentelemetry import trace
+
+        response = MockServiceStatistics(document_count=5000, index_count=3)
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.get_service_statistics") as span:
+            _set_service_statistics_response_attributes(span, response)
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT) == 5000
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SERVICE_INDEX_COUNT) == 3
+
+    def test_service_statistics_none_response(self, exporter):
+        """Test get_service_statistics handles None response gracefully."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_service_statistics_response_attributes,
+        )
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.get_service_statistics") as span:
+            _set_service_statistics_response_attributes(span, None)
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT not in spans[0].attributes
+
+    def test_service_statistics_no_counters(self, exporter):
+        """Test get_service_statistics handles response without counters."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_service_statistics_response_attributes,
+        )
+        from opentelemetry import trace
+
+        response = MagicMock(spec=[])  # No attributes at all
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("azure_search.get_service_statistics") as span:
+            _set_service_statistics_response_attributes(span, response)
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT not in spans[0].attributes
+
+
+class TestBufferedSenderInstrumentation:
+    """Tests for SearchIndexingBufferedSender instrumentation."""
+
+    def test_buffered_upload_documents_span(self, exporter):
+        """Test upload_documents on BufferedSender creates span with document count."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_document_batch_attributes,
+        )
+        from opentelemetry import trace
+
+        documents = [{"id": "1"}, {"id": "2"}, {"id": "3"}]
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.upload_documents",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ) as span:
+            _set_document_batch_attributes(span, (documents,), {})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.upload_documents"
+        assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 3
+
+    def test_buffered_delete_documents_span(self, exporter):
+        """Test delete_documents on BufferedSender creates span with document count."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_document_batch_attributes,
+        )
+        from opentelemetry import trace
+
+        documents = [{"id": "1"}, {"id": "2"}]
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.delete_documents",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ) as span:
+            _set_document_batch_attributes(span, (), {"documents": documents})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.delete_documents"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 2
+
+    def test_buffered_merge_documents_span(self, exporter):
+        """Test merge_documents on BufferedSender creates span with document count."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_document_batch_attributes,
+        )
+        from opentelemetry import trace
+
+        documents = [{"id": "1", "rating": 5}]
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.merge_documents",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ) as span:
+            _set_document_batch_attributes(span, (documents,), {})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.merge_documents"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 1
+
+    def test_buffered_merge_or_upload_documents_span(self, exporter):
+        """Test merge_or_upload_documents on BufferedSender creates span with document count."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_document_batch_attributes,
+        )
+        from opentelemetry import trace
+
+        documents = [{"id": "1"}, {"id": "2"}, {"id": "3"}, {"id": "4"}]
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.merge_or_upload_documents",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ) as span:
+            _set_document_batch_attributes(span, (documents,), {})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.merge_or_upload_documents"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 4
+
+    def test_buffered_index_documents_span(self, exporter):
+        """Test index_documents on BufferedSender creates span with batch action count."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_index_documents_attributes,
+        )
+        from opentelemetry import trace
+
+        batch = MagicMock()
+        batch.actions = [MagicMock(), MagicMock(), MagicMock()]
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.index_documents",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ) as span:
+            _set_index_documents_attributes(span, (), {"batch": batch})
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.index_documents"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 3
+
+    def test_buffered_flush_span(self, exporter):
+        """Test flush creates span 'azure_search.flush'."""
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.flush",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            pass
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.flush"
+        assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
+
+    def test_buffered_sender_db_system(self, exporter):
+        """Test BufferedSender spans have db.system='Azure AI Search'."""
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.upload_documents",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            pass
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
+
+    def test_buffered_sender_methods_in_init(self):
+        """Test BUFFERED_SENDER_METHODS are correctly defined in __init__.py."""
+        from opentelemetry.instrumentation.azure_search import (
+            BUFFERED_SENDER_METHODS,
+            ASYNC_BUFFERED_SENDER_METHODS,
+            WRAPPED_METHODS,
+        )
+
+        sync_methods = {m["method"] for m in BUFFERED_SENDER_METHODS}
+        assert sync_methods == {
+            "upload_documents", "delete_documents", "merge_documents",
+            "merge_or_upload_documents", "index_documents", "flush",
+        }
+
+        async_methods = {m["method"] for m in ASYNC_BUFFERED_SENDER_METHODS}
+        assert async_methods == {
+            "upload_documents", "delete_documents", "merge_documents",
+            "merge_or_upload_documents", "index_documents", "flush",
+        }
+
+        all_methods = [(m["module"], m["object"], m["method"]) for m in WRAPPED_METHODS]
+        for m in BUFFERED_SENDER_METHODS + ASYNC_BUFFERED_SENDER_METHODS:
+            assert (m["module"], m["object"], m["method"]) in all_methods
+
+
+class TestNameOnlyListingMethods:
+    """Tests for name-only listing methods instrumentation."""
+
+    def test_list_index_names_span(self, exporter):
+        """Test list_index_names creates span 'azure_search.list_index_names'."""
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.list_index_names",
+            kind=trace.SpanKind.CLIENT,
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            pass
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.list_index_names"
+        assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
+
+    def test_get_indexer_names_span(self, exporter):
+        """Test get_indexer_names creates span 'azure_search.get_indexer_names'."""
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.get_indexer_names",
+            kind=trace.SpanKind.CLIENT,
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            pass
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.get_indexer_names"
+        assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
+
+    def test_get_data_source_connection_names_span(self, exporter):
+        """Test get_data_source_connection_names creates span."""
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.get_data_source_connection_names",
+            kind=trace.SpanKind.CLIENT,
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            pass
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.get_data_source_connection_names"
+        assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
+
+    def test_get_skillset_names_span(self, exporter):
+        """Test get_skillset_names creates span 'azure_search.get_skillset_names'."""
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.get_skillset_names",
+            kind=trace.SpanKind.CLIENT,
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            pass
+
+        spans = exporter.get_finished_spans()
+        assert len(spans) == 1
+        assert spans[0].name == "azure_search.get_skillset_names"
+        assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
+
+    def test_name_only_methods_in_init(self):
+        """Test name-only listing methods are defined in __init__.py."""
+        from opentelemetry.instrumentation.azure_search import (
+            SEARCH_INDEX_CLIENT_METHODS,
+            SEARCH_INDEXER_CLIENT_METHODS,
+        )
+
+        index_client_methods = {m["method"] for m in SEARCH_INDEX_CLIENT_METHODS}
+        assert "list_index_names" in index_client_methods
+
+        indexer_client_methods = {m["method"] for m in SEARCH_INDEXER_CLIENT_METHODS}
+        assert "get_indexer_names" in indexer_client_methods
+        assert "get_data_source_connection_names" in indexer_client_methods
+        assert "get_skillset_names" in indexer_client_methods
+
+    def test_dispatch_handles_name_only_methods_gracefully(self, exporter):
+        """Test _set_request_attributes handles name-only methods without error."""
+        from opentelemetry.instrumentation.azure_search.wrapper import (
+            _set_request_attributes,
+        )
+        from opentelemetry import trace
+
+        tracer = trace.get_tracer(__name__)
+        instance = MagicMock()
+        instance._index_name = None
+
+        for method in ["list_index_names", "get_indexer_names",
+                       "get_data_source_connection_names", "get_skillset_names", "flush"]:
+            with tracer.start_as_current_span(f"azure_search.{method}") as span:
+                _set_request_attributes(span, method, instance, (), {})

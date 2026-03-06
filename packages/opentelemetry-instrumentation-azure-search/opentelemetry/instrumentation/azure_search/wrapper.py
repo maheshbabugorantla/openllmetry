@@ -34,6 +34,42 @@ _INDEX_MANAGEMENT_METHODS = frozenset({
     "get_index_statistics",
 })
 
+_INDEXER_MANAGEMENT_METHODS = frozenset({
+    "create_indexer",
+    "create_or_update_indexer",
+    "delete_indexer",
+    "get_indexer",
+    "get_indexers",
+    "run_indexer",
+    "reset_indexer",
+    "get_indexer_status",
+})
+
+_DATA_SOURCE_METHODS = frozenset({
+    "create_data_source_connection",
+    "create_or_update_data_source_connection",
+    "delete_data_source_connection",
+    "get_data_source_connection",
+    "get_data_source_connections",
+})
+
+_SKILLSET_METHODS = frozenset({
+    "create_skillset",
+    "create_or_update_skillset",
+    "delete_skillset",
+    "get_skillset",
+    "get_skillsets",
+})
+
+_SYNONYM_MAP_METHODS = frozenset({
+    "create_synonym_map",
+    "create_or_update_synonym_map",
+    "delete_synonym_map",
+    "get_synonym_map",
+    "get_synonym_maps",
+    "get_synonym_map_names",
+})
+
 
 def _set_span_attribute(span, name, value):
     if value is not None:
@@ -72,6 +108,15 @@ def _set_request_attributes(span, method, instance, args, kwargs):
         _set_index_management_attributes(span, method, args, kwargs)
     elif method == "analyze_text":
         _set_analyze_text_attributes(span, args, kwargs)
+    elif method in _INDEXER_MANAGEMENT_METHODS:
+        _set_indexer_management_attributes(span, method, args, kwargs)
+    elif method in _DATA_SOURCE_METHODS:
+        _set_data_source_attributes(span, method, args, kwargs)
+    elif method in _SKILLSET_METHODS:
+        _set_skillset_attributes(span, method, args, kwargs)
+    elif method in _SYNONYM_MAP_METHODS:
+        _set_synonym_map_attributes(span, method, args, kwargs)
+    # Name-only listing methods and flush need no special request attributes
 
 
 @dont_throw
@@ -88,6 +133,8 @@ def _set_response_attributes(span, method, response, args, kwargs):
         _set_autocomplete_response_attributes(span, response)
     elif method == "suggest":
         _set_suggest_response_attributes(span, response)
+    elif method == "get_indexer_status":
+        _set_indexer_status_attributes(span, args, kwargs, response)
     elif method == "get_service_statistics":
         _set_service_statistics_response_attributes(span, response)
 
@@ -396,6 +443,112 @@ def _set_analyze_text_attributes(span, args, kwargs):
         if hasattr(analyzer_name, "value"):
             analyzer_name = analyzer_name.value
         _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_ANALYZER_NAME, str(analyzer_name))
+
+
+@dont_throw
+def _set_indexer_management_attributes(span, method, args, kwargs):
+    """Set attributes for indexer management operations."""
+    indexer_name = None
+
+    if method in ["create_indexer", "create_or_update_indexer"]:
+        indexer = kwargs.get("indexer") or (args[0] if args else None)
+        if indexer:
+            indexer_name = getattr(indexer, "name", None)
+    else:
+        indexer_name = kwargs.get("name") or kwargs.get("indexer_name") or (args[0] if args else None)
+        if indexer_name and not isinstance(indexer_name, str):
+            indexer_name = getattr(indexer_name, "name", None)
+
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEXER_NAME, indexer_name)
+
+
+@dont_throw
+def _set_indexer_status_attributes(span, args, kwargs, response):
+    """Set attributes for get_indexer_status response."""
+    if response:
+        status = getattr(response, "status", None)
+        if status:
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEXER_STATUS, str(status))
+
+        last_result = getattr(response, "last_result", None)
+        if last_result:
+            items_processed = getattr(last_result, "items_processed", None)
+            items_failed = getattr(last_result, "items_failed", None)
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENTS_PROCESSED, items_processed)
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENTS_FAILED, items_failed)
+
+
+@dont_throw
+def _set_data_source_attributes(span, method, args, kwargs):
+    """Set attributes for data source operations."""
+    data_source_name = None
+    data_source_type = None
+
+    if method in ["create_data_source_connection", "create_or_update_data_source_connection"]:
+        data_source = kwargs.get("data_source_connection") or (args[0] if args else None)
+        if data_source:
+            data_source_name = getattr(data_source, "name", None)
+            data_source_type = getattr(data_source, "type", None)
+            if data_source_type is not None:
+                if hasattr(data_source_type, "value"):
+                    data_source_type = data_source_type.value
+                else:
+                    data_source_type = str(data_source_type)
+    else:
+        data_source_name = kwargs.get("name") or kwargs.get("data_source_name") or (args[0] if args else None)
+        if data_source_name and not isinstance(data_source_name, str):
+            data_source_name = getattr(data_source_name, "name", None)
+
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DATA_SOURCE_NAME, data_source_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DATA_SOURCE_TYPE, data_source_type)
+
+
+@dont_throw
+def _set_skillset_attributes(span, method, args, kwargs):
+    """Set attributes for skillset operations."""
+    skillset_name = None
+    skill_count = None
+
+    if method in ["create_skillset", "create_or_update_skillset"]:
+        skillset = kwargs.get("skillset") or (args[0] if args else None)
+        if skillset:
+            skillset_name = getattr(skillset, "name", None)
+            skills = getattr(skillset, "skills", None)
+            if skills and hasattr(skills, "__len__"):
+                skill_count = len(skills)
+    else:
+        skillset_name = kwargs.get("name") or kwargs.get("skillset_name") or (args[0] if args else None)
+        if skillset_name and not isinstance(skillset_name, str):
+            skillset_name = getattr(skillset_name, "name", None)
+
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SKILLSET_NAME, skillset_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SKILLSET_SKILL_COUNT, skill_count)
+
+
+@dont_throw
+def _set_synonym_map_attributes(span, method, args, kwargs):
+    """Set attributes for synonym map operations."""
+    synonym_map_name = None
+    synonyms_count = None
+
+    if method in ["create_synonym_map", "create_or_update_synonym_map"]:
+        synonym_map = kwargs.get("synonym_map") or (args[0] if args else None)
+        if synonym_map:
+            synonym_map_name = getattr(synonym_map, "name", None)
+            synonyms = getattr(synonym_map, "synonyms", None)
+            if synonyms:
+                if isinstance(synonyms, list):
+                    synonyms_count = len(synonyms)
+                elif isinstance(synonyms, str):
+                    stripped = synonyms.strip()
+                    synonyms_count = len(stripped.split("\n")) if stripped else 0
+    elif method in ["delete_synonym_map", "get_synonym_map"]:
+        synonym_map_name = kwargs.get("name") or kwargs.get("synonym_map_name") or (args[0] if args else None)
+        if synonym_map_name and not isinstance(synonym_map_name, str):
+            synonym_map_name = getattr(synonym_map_name, "name", None)
+
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME, synonym_map_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT, synonyms_count)
 
 
 # --- Response attribute extraction ---

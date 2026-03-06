@@ -201,9 +201,46 @@ SEARCH_INDEX_CLIENT_METHODS = [
         "method": "list_index_names",
         "span_name": "azure.search.list_index_names",
     },
+    # Synonym Map Management (6 methods)
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "create_synonym_map",
+        "span_name": "azure_search.create_synonym_map",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "create_or_update_synonym_map",
+        "span_name": "azure_search.create_or_update_synonym_map",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "delete_synonym_map",
+        "span_name": "azure_search.delete_synonym_map",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "get_synonym_map",
+        "span_name": "azure_search.get_synonym_map",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "get_synonym_maps",
+        "span_name": "azure_search.get_synonym_maps",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "get_synonym_map_names",
+        "span_name": "azure_search.get_synonym_map_names",
+    },
 ]
 
-# Async SearchIndexClient methods (azure.search.documents.indexes.aio) — 9 async (no synonym maps yet)
+# Async SearchIndexClient methods (azure.search.documents.indexes.aio)
 ASYNC_SEARCH_INDEX_CLIENT_METHODS = [
     {
         "module": "azure.search.documents.indexes.aio",
@@ -259,13 +296,400 @@ ASYNC_SEARCH_INDEX_CLIENT_METHODS = [
         "method": "list_index_names",
         "span_name": "azure.search.list_index_names",
     },
+    # Synonym Map Management (6 methods)
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "create_synonym_map",
+        "span_name": "azure_search.create_synonym_map",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "create_or_update_synonym_map",
+        "span_name": "azure_search.create_or_update_synonym_map",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "delete_synonym_map",
+        "span_name": "azure_search.delete_synonym_map",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "get_synonym_map",
+        "span_name": "azure_search.get_synonym_map",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "get_synonym_maps",
+        "span_name": "azure_search.get_synonym_maps",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "get_synonym_map_names",
+        "span_name": "azure_search.get_synonym_map_names",
+    },
+]
+
+# SearchIndexerClient methods (azure.search.documents.indexes)
+SEARCH_INDEXER_CLIENT_METHODS = [
+    # Indexer Management (9 methods)
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "create_indexer",
+        "span_name": "azure_search.create_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "create_or_update_indexer",
+        "span_name": "azure_search.create_or_update_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "delete_indexer",
+        "span_name": "azure_search.delete_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_indexer",
+        "span_name": "azure_search.get_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_indexers",
+        "span_name": "azure_search.get_indexers",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "run_indexer",
+        "span_name": "azure_search.run_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "reset_indexer",
+        "span_name": "azure_search.reset_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_indexer_status",
+        "span_name": "azure_search.get_indexer_status",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_indexer_names",
+        "span_name": "azure_search.get_indexer_names",
+    },
+    # Data Source Management (6 methods)
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "create_data_source_connection",
+        "span_name": "azure_search.create_data_source_connection",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "create_or_update_data_source_connection",
+        "span_name": "azure_search.create_or_update_data_source_connection",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "delete_data_source_connection",
+        "span_name": "azure_search.delete_data_source_connection",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_data_source_connection",
+        "span_name": "azure_search.get_data_source_connection",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_data_source_connections",
+        "span_name": "azure_search.get_data_source_connections",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_data_source_connection_names",
+        "span_name": "azure_search.get_data_source_connection_names",
+    },
+    # Skillset Management (6 methods)
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "create_skillset",
+        "span_name": "azure_search.create_skillset",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "create_or_update_skillset",
+        "span_name": "azure_search.create_or_update_skillset",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "delete_skillset",
+        "span_name": "azure_search.delete_skillset",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_skillset",
+        "span_name": "azure_search.get_skillset",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_skillsets",
+        "span_name": "azure_search.get_skillsets",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexerClient",
+        "method": "get_skillset_names",
+        "span_name": "azure_search.get_skillset_names",
+    },
+]
+
+# Async SearchIndexerClient methods (azure.search.documents.indexes.aio)
+ASYNC_SEARCH_INDEXER_CLIENT_METHODS = [
+    # Indexer Management (9 methods)
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "create_indexer",
+        "span_name": "azure_search.create_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "create_or_update_indexer",
+        "span_name": "azure_search.create_or_update_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "delete_indexer",
+        "span_name": "azure_search.delete_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_indexer",
+        "span_name": "azure_search.get_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_indexers",
+        "span_name": "azure_search.get_indexers",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "run_indexer",
+        "span_name": "azure_search.run_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "reset_indexer",
+        "span_name": "azure_search.reset_indexer",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_indexer_status",
+        "span_name": "azure_search.get_indexer_status",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_indexer_names",
+        "span_name": "azure_search.get_indexer_names",
+    },
+    # Data Source Management (6 methods)
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "create_data_source_connection",
+        "span_name": "azure_search.create_data_source_connection",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "create_or_update_data_source_connection",
+        "span_name": "azure_search.create_or_update_data_source_connection",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "delete_data_source_connection",
+        "span_name": "azure_search.delete_data_source_connection",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_data_source_connection",
+        "span_name": "azure_search.get_data_source_connection",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_data_source_connections",
+        "span_name": "azure_search.get_data_source_connections",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_data_source_connection_names",
+        "span_name": "azure_search.get_data_source_connection_names",
+    },
+    # Skillset Management (6 methods)
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "create_skillset",
+        "span_name": "azure_search.create_skillset",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "create_or_update_skillset",
+        "span_name": "azure_search.create_or_update_skillset",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "delete_skillset",
+        "span_name": "azure_search.delete_skillset",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_skillset",
+        "span_name": "azure_search.get_skillset",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_skillsets",
+        "span_name": "azure_search.get_skillsets",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexerClient",
+        "method": "get_skillset_names",
+        "span_name": "azure_search.get_skillset_names",
+    },
+]
+
+# SearchIndexingBufferedSender methods (azure.search.documents)
+BUFFERED_SENDER_METHODS = [
+    {
+        "module": "azure.search.documents",
+        "object": "SearchIndexingBufferedSender",
+        "method": "upload_documents",
+        "span_name": "azure_search.upload_documents",
+    },
+    {
+        "module": "azure.search.documents",
+        "object": "SearchIndexingBufferedSender",
+        "method": "delete_documents",
+        "span_name": "azure_search.delete_documents",
+    },
+    {
+        "module": "azure.search.documents",
+        "object": "SearchIndexingBufferedSender",
+        "method": "merge_documents",
+        "span_name": "azure_search.merge_documents",
+    },
+    {
+        "module": "azure.search.documents",
+        "object": "SearchIndexingBufferedSender",
+        "method": "merge_or_upload_documents",
+        "span_name": "azure_search.merge_or_upload_documents",
+    },
+    {
+        "module": "azure.search.documents",
+        "object": "SearchIndexingBufferedSender",
+        "method": "index_documents",
+        "span_name": "azure_search.index_documents",
+    },
+    {
+        "module": "azure.search.documents",
+        "object": "SearchIndexingBufferedSender",
+        "method": "flush",
+        "span_name": "azure_search.flush",
+    },
+]
+
+# Async SearchIndexingBufferedSender methods (azure.search.documents.aio)
+ASYNC_BUFFERED_SENDER_METHODS = [
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchIndexingBufferedSender",
+        "method": "upload_documents",
+        "span_name": "azure_search.upload_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchIndexingBufferedSender",
+        "method": "delete_documents",
+        "span_name": "azure_search.delete_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchIndexingBufferedSender",
+        "method": "merge_documents",
+        "span_name": "azure_search.merge_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchIndexingBufferedSender",
+        "method": "merge_or_upload_documents",
+        "span_name": "azure_search.merge_or_upload_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchIndexingBufferedSender",
+        "method": "index_documents",
+        "span_name": "azure_search.index_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchIndexingBufferedSender",
+        "method": "flush",
+        "span_name": "azure_search.flush",
+    },
 ]
 
 WRAPPED_METHODS = (
     SEARCH_CLIENT_METHODS
-    + ASYNC_SEARCH_CLIENT_METHODS
     + SEARCH_INDEX_CLIENT_METHODS
+    + SEARCH_INDEXER_CLIENT_METHODS
+    + BUFFERED_SENDER_METHODS
+    + ASYNC_SEARCH_CLIENT_METHODS
     + ASYNC_SEARCH_INDEX_CLIENT_METHODS
+    + ASYNC_SEARCH_INDEXER_CLIENT_METHODS
+    + ASYNC_BUFFERED_SENDER_METHODS
 )
 
 
