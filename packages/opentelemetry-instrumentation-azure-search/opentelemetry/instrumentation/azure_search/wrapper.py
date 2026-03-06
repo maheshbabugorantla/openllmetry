@@ -233,13 +233,13 @@ def _set_search_attributes(span, args, kwargs):
     if top:
         _set_span_attribute(span, SpanAttributes.VECTOR_DB_QUERY_TOP_K, top)
 
-    # Vector search attributes (PR4)
+    # Vector search attributes
     _set_vector_search_attributes(span, kwargs)
 
-    # Semantic search attributes (PR4)
+    # Semantic search attributes
     _set_semantic_search_attributes(span, kwargs)
 
-    # Additional search parameters (PR4)
+    # Additional search parameters
     search_mode = kwargs.get("search_mode")
     if search_mode is not None:
         sm_str = search_mode.value if hasattr(search_mode, "value") else str(search_mode)
