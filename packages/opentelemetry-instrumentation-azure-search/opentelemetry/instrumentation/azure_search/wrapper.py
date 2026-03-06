@@ -12,7 +12,6 @@ from opentelemetry.instrumentation.azure_search.utils import (
 from opentelemetry.trace.status import Status, StatusCode
 from opentelemetry.instrumentation.utils import _SUPPRESS_INSTRUMENTATION_KEY
 from opentelemetry.trace import SpanKind
-from opentelemetry.semconv.trace import SpanAttributes as OTelSpanAttributes
 from opentelemetry.semconv_ai import SpanAttributes, EventAttributes
 
 logger = logging.getLogger(__name__)
@@ -118,8 +117,6 @@ def _sync_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
         },
         set_status_on_exception=False,
     ) as span:
-        span.set_attribute(OTelSpanAttributes.DB_SYSTEM, SpanAttributes.AZURE_AI_SEARCH_DB_SYSTEM_NAME)
-        span.set_attribute(OTelSpanAttributes.DB_OPERATION, method)
         _set_request_attributes(span, method, instance, args, kwargs)
 
         # Compute content toggle, max items, and max length once per span
@@ -169,8 +166,6 @@ async def _async_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
         },
         set_status_on_exception=False,
     ) as span:
-        span.set_attribute(OTelSpanAttributes.DB_SYSTEM, SpanAttributes.AZURE_AI_SEARCH_DB_SYSTEM_NAME)
-        span.set_attribute(OTelSpanAttributes.DB_OPERATION, method)
         _set_request_attributes(span, method, instance, args, kwargs)
 
         # Compute content toggle, max items, and max length once per span
@@ -218,21 +213,21 @@ async def _async_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
 def _set_index_name_attribute(span, instance, args, kwargs):
     index_name = getattr(instance, "_index_name", None)
     if index_name:
-        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, index_name)
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
 
 
 @dont_throw
 def _set_search_attributes(span, args, kwargs):
     search_text = kwargs.get("search_text") or (args[0] if args else None)
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_TEXT, search_text)
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_TOP, kwargs.get("top"))
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_SKIP, kwargs.get("skip"))
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_FILTER, kwargs.get("filter"))
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_TEXT, search_text)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_TOP, kwargs.get("top"))
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_SKIP, kwargs.get("skip"))
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_FILTER, kwargs.get("filter"))
 
     query_type = kwargs.get("query_type")
     if query_type is not None:
         qt_str = query_type.value if hasattr(query_type, "value") else str(query_type)
-        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_QUERY_TYPE, qt_str)
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_QUERY_TYPE, qt_str)
 
     top = kwargs.get("top")
     if top:
@@ -341,14 +336,14 @@ def _set_semantic_search_attributes(span, kwargs):
 @dont_throw
 def _set_get_document_attributes(span, args, kwargs):
     key = kwargs.get("key") or (args[0] if args else None)
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_KEY, key)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENT_KEY, key)
 
 
 @dont_throw
 def _set_document_batch_attributes(span, args, kwargs):
     documents = kwargs.get("documents") or (args[0] if args else None)
     if documents and hasattr(documents, "__len__"):
-        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT, len(documents))
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT, len(documents))
 
 
 @dont_throw
@@ -357,15 +352,15 @@ def _set_index_documents_attributes(span, args, kwargs):
     if batch:
         actions = getattr(batch, "actions", None)
         if actions and hasattr(actions, "__len__"):
-            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT, len(actions))
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT, len(actions))
 
 
 @dont_throw
 def _set_suggestion_attributes(span, args, kwargs):
     search_text = kwargs.get("search_text") or (args[0] if args else None)
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_TEXT, search_text)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_TEXT, search_text)
     suggester_name = kwargs.get("suggester_name") or (args[1] if len(args) > 1 else None)
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SUGGESTER_NAME, suggester_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SUGGESTER_NAME, suggester_name)
 
 
 @dont_throw
@@ -374,19 +369,19 @@ def _set_index_management_attributes(span, method, args, kwargs):
         index = kwargs.get("index") or (args[0] if args else None)
         if index:
             index_name = getattr(index, "name", None)
-            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, index_name)
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
     elif method in ["delete_index", "get_index", "get_index_statistics"]:
         index_name = kwargs.get("index") or kwargs.get("index_name") or (args[0] if args else None)
         if isinstance(index_name, str):
-            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, index_name)
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
         elif hasattr(index_name, "name"):
-            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, index_name.name)
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name.name)
 
 
 @dont_throw
 def _set_analyze_text_attributes(span, args, kwargs):
     index_name = kwargs.get("index_name") or (args[0] if args else None)
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, index_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
 
     analyze_request = kwargs.get("analyze_request") or (args[1] if len(args) > 1 else None)
     analyzer_name = None
@@ -400,7 +395,7 @@ def _set_analyze_text_attributes(span, args, kwargs):
     if analyzer_name:
         if hasattr(analyzer_name, "value"):
             analyzer_name = analyzer_name.value
-        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_ANALYZER_NAME, str(analyzer_name))
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_ANALYZER_NAME, str(analyzer_name))
 
 
 # --- Response attribute extraction ---
@@ -416,7 +411,7 @@ def _set_search_response_attributes(span, response):
         return
     total = count_fn()
     if total is not None:
-        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_RESULTS_COUNT, total)
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_RESULTS_COUNT, total)
 
 
 @dont_throw
@@ -430,25 +425,25 @@ async def _set_search_response_attributes_async(span, response):
     else:
         total = count_fn()
     if total is not None:
-        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_RESULTS_COUNT, total)
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_RESULTS_COUNT, total)
 
 
 @dont_throw
 def _set_document_count_response_attributes(span, response):
     if isinstance(response, int):
-        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT, response)
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT, response)
 
 
 @dont_throw
 def _set_autocomplete_response_attributes(span, response):
     if isinstance(response, list):
-        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_AUTOCOMPLETE_RESULTS_COUNT, len(response))
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_AUTOCOMPLETE_RESULTS_COUNT, len(response))
 
 
 @dont_throw
 def _set_suggest_response_attributes(span, response):
     if isinstance(response, list):
-        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SUGGEST_RESULTS_COUNT, len(response))
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SUGGEST_RESULTS_COUNT, len(response))
 
 
 def _deep_get(obj, key):
@@ -466,13 +461,13 @@ def _set_service_statistics_response_attributes(span, response):
         if doc_counter:
             usage = _deep_get(doc_counter, "usage")
             if usage is not None:
-                _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SERVICE_DOCUMENT_COUNT, usage)
+                _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT, usage)
 
         index_counter = _deep_get(counters, "index_counter")
         if index_counter:
             usage = _deep_get(index_counter, "usage")
             if usage is not None:
-                _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SERVICE_INDEX_COUNT, usage)
+                _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SERVICE_INDEX_COUNT, usage)
 
 
 # --- Content attribute functions (gated by TRACELOOP_TRACE_CONTENT) ---
@@ -626,8 +621,8 @@ def _set_indexing_response_single_pass(span, results, content_enabled=False, max
                 }, max_length),
             )
     failed = len(results) - succeeded
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT, succeeded)
-    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_FAILED_COUNT, failed)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT, succeeded)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENT_FAILED_COUNT, failed)
 
 
 @dont_throw
