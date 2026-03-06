@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from opentelemetry import context as context_api
@@ -19,6 +20,14 @@ _DOCUMENT_BATCH_METHODS = frozenset({
 })
 
 _SUGGESTION_METHODS = frozenset({"autocomplete", "suggest"})
+
+_INDEX_MANAGEMENT_METHODS = frozenset({
+    "create_index",
+    "create_or_update_index",
+    "delete_index",
+    "get_index",
+    "get_index_statistics",
+})
 
 
 def _set_span_attribute(span, name, value):
@@ -54,6 +63,10 @@ def _set_request_attributes(span, method, instance, args, kwargs):
         _set_index_documents_attributes(span, args, kwargs)
     elif method in _SUGGESTION_METHODS:
         _set_suggestion_attributes(span, args, kwargs)
+    elif method in _INDEX_MANAGEMENT_METHODS:
+        _set_index_management_attributes(span, method, args, kwargs)
+    elif method == "analyze_text":
+        _set_analyze_text_attributes(span, args, kwargs)
 
 
 @dont_throw
@@ -70,6 +83,8 @@ def _set_response_attributes(span, method, response, args, kwargs):
         _set_autocomplete_response_attributes(span, response)
     elif method == "suggest":
         _set_suggest_response_attributes(span, response)
+    elif method == "get_service_statistics":
+        _set_service_statistics_response_attributes(span, response)
 
 
 @_with_tracer_wrapper
@@ -77,6 +92,9 @@ def _wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
     """Instruments and calls every function defined in WRAPPED_METHODS."""
     if context_api.get_value(_SUPPRESS_INSTRUMENTATION_KEY):
         return wrapped(*args, **kwargs)
+
+    if asyncio.iscoroutinefunction(wrapped):
+        return _async_wrap(tracer, to_wrap, wrapped, instance, args, kwargs)
 
     return _sync_wrap(tracer, to_wrap, wrapped, instance, args, kwargs)
 
@@ -98,7 +116,7 @@ def _sync_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
         span.set_attribute(OTelSpanAttributes.DB_OPERATION, method)
         _set_request_attributes(span, method, instance, args, kwargs)
 
-        # Content capture is stubbed (should_send_content() always False in PR2)
+        # Content capture is stubbed (should_send_content() always False in PR3)
         content_enabled = should_send_content()  # noqa: F841
 
         try:
@@ -108,6 +126,45 @@ def _sync_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
             raise
 
         _set_response_attributes(span, method, response, args, kwargs)
+
+        if method in _DOCUMENT_BATCH_METHODS:
+            _set_document_batch_response_all(span, response)
+        elif method == "index_documents":
+            _set_index_documents_response_all(span, response)
+
+        span.set_status(Status(StatusCode.OK))
+        return response
+
+
+async def _async_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
+    """Asynchronous instrumentation wrapper."""
+    name = to_wrap.get("span_name")
+    method = to_wrap.get("method")
+
+    with tracer.start_as_current_span(
+        name,
+        kind=SpanKind.CLIENT,
+        attributes={
+            SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search",
+        },
+        set_status_on_exception=False,
+    ) as span:
+        _set_request_attributes(span, method, instance, args, kwargs)
+
+        # Content capture is stubbed (should_send_content() always False in PR3)
+        content_enabled = should_send_content()  # noqa: F841
+
+        try:
+            response = await wrapped(*args, **kwargs)
+        except Exception as e:
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            raise
+
+        _set_response_attributes(span, method, response, args, kwargs)
+
+        # For search, get_count() is a coroutine on AsyncSearchItemPaged
+        if method == "search":
+            await _set_search_response_attributes_async(span, response)
 
         if method in _DOCUMENT_BATCH_METHODS:
             _set_document_batch_response_all(span, response)
@@ -176,17 +233,72 @@ def _set_suggestion_attributes(span, args, kwargs):
     _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SUGGESTER_NAME, suggester_name)
 
 
+@dont_throw
+def _set_index_management_attributes(span, method, args, kwargs):
+    """Set attributes for index management operations."""
+    if method in ["create_index", "create_or_update_index"]:
+        index = kwargs.get("index") or (args[0] if args else None)
+        if index:
+            index_name = getattr(index, "name", None)
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
+    elif method in ["delete_index", "get_index", "get_index_statistics"]:
+        index_name = kwargs.get("index") or kwargs.get("index_name") or (args[0] if args else None)
+        if isinstance(index_name, str):
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
+        elif hasattr(index_name, "name"):
+            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name.name)
+
+
+@dont_throw
+def _set_analyze_text_attributes(span, args, kwargs):
+    """Set attributes for analyze_text operation."""
+    index_name = kwargs.get("index_name") or (args[0] if args else None)
+    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
+
+    analyze_request = kwargs.get("analyze_request") or (args[1] if len(args) > 1 else None)
+    analyzer_name = None
+
+    if analyze_request:
+        analyzer_name = getattr(analyze_request, "analyzer_name", None)
+
+    if not analyzer_name:
+        analyzer_name = kwargs.get("analyzer_name") or kwargs.get("analyzer")
+
+    if analyzer_name:
+        if hasattr(analyzer_name, "value"):
+            analyzer_name = analyzer_name.value
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_ANALYZER_NAME, str(analyzer_name))
+
+
 # --- Response attribute extraction ---
 
 
 @dont_throw
 def _set_search_response_attributes(span, response):
+    """Sync: set results count from SearchItemPaged.get_count()."""
     count_fn = getattr(response, "get_count", None)
     if not callable(count_fn):
+        return
+    # Skip async coroutines here — handled by _set_search_response_attributes_async
+    if asyncio.iscoroutinefunction(count_fn):
         return
     total = count_fn()
     if total is not None:
         _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_RESULTS_COUNT, total)
+
+
+@dont_throw
+async def _set_search_response_attributes_async(span, response):
+    """Async: set results count from AsyncSearchItemPaged.get_count()."""
+    count_fn = getattr(response, "get_count", None)
+    if not callable(count_fn):
+        return
+    if asyncio.iscoroutinefunction(count_fn):
+        total = await count_fn()
+    else:
+        total = count_fn()
+    if total is not None:
+        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_RESULTS_COUNT, total)
 
 
 @dont_throw
@@ -205,6 +317,31 @@ def _set_autocomplete_response_attributes(span, response):
 def _set_suggest_response_attributes(span, response):
     if isinstance(response, list):
         _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SUGGEST_RESULTS_COUNT, len(response))
+
+
+def _deep_get(obj, key):
+    """Get a value from an object that may be a dict or an object with attributes."""
+    if isinstance(obj, dict):
+        return obj.get(key)
+    return getattr(obj, key, None)
+
+
+@dont_throw
+def _set_service_statistics_response_attributes(span, response):
+    """Set attributes from get_service_statistics response."""
+    counters = _deep_get(response, "counters")
+    if counters:
+        doc_counter = _deep_get(counters, "document_counter")
+        if doc_counter:
+            usage = _deep_get(doc_counter, "usage")
+            if usage is not None:
+                _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT, usage)
+
+        index_counter = _deep_get(counters, "index_counter")
+        if index_counter:
+            usage = _deep_get(index_counter, "usage")
+            if usage is not None:
+                _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SERVICE_INDEX_COUNT, usage)
 
 
 def _set_indexing_response_single_pass(span, results):

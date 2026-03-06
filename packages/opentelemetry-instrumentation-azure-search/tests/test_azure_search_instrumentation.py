@@ -476,3 +476,309 @@ class TestDontThrow:
             return 42
 
         assert good() == 42
+
+    def test_async_dont_throw_swallows_exceptions(self):
+        import asyncio
+        from opentelemetry.instrumentation.azure_search.utils import dont_throw
+
+        @dont_throw
+        async def async_broken():
+            raise RuntimeError("async error")
+
+        result = asyncio.get_event_loop().run_until_complete(async_broken())
+        assert result is None
+
+    def test_async_dont_throw_returns_value_on_success(self):
+        import asyncio
+        from opentelemetry.instrumentation.azure_search.utils import dont_throw
+
+        @dont_throw
+        async def async_good():
+            return 99
+
+        result = asyncio.get_event_loop().run_until_complete(async_good())
+        assert result == 99
+
+
+# ---------------------------------------------------------------------------
+# PR3 Tests — Async + SearchIndexClient
+# ---------------------------------------------------------------------------
+
+class MockSearchIndex:
+    """Mock SearchIndex for testing."""
+
+    def __init__(self, name, fields=None):
+        self.name = name
+        self.fields = fields or []
+
+
+class MockServiceCounters:
+    """Mock service counters for get_service_statistics response."""
+
+    def __init__(self, document_count=0, index_count=0):
+        self.document_counter = MagicMock(usage=document_count)
+        self.index_counter = MagicMock(usage=index_count)
+
+
+class MockServiceStatistics:
+    """Mock service statistics response."""
+
+    def __init__(self, document_count=0, index_count=0):
+        self.counters = MockServiceCounters(document_count, index_count)
+
+
+class MockSearchIndexClient:
+    """Mock SearchIndexClient for testing."""
+
+    def __init__(self, endpoint, credential):
+        self._endpoint = endpoint
+        self._credential = credential
+
+    def create_index(self, index, **kwargs):
+        return index
+
+    def create_or_update_index(self, index, **kwargs):
+        return index
+
+    def delete_index(self, index, **kwargs):
+        return None
+
+    def get_index(self, index_name, **kwargs):
+        return MockSearchIndex(name=index_name)
+
+    def list_indexes(self, **kwargs):
+        return iter([MockSearchIndex(name="index1"), MockSearchIndex(name="index2")])
+
+    def get_index_statistics(self, index_name, **kwargs):
+        return {"document_count": 100, "storage_size": 1024}
+
+    def analyze_text(self, index_name, analyze_request, **kwargs):
+        return {"tokens": [{"token": "test"}]}
+
+    def get_service_statistics(self, **kwargs):
+        return MockServiceStatistics(document_count=5000, index_count=3)
+
+    def list_index_names(self, **kwargs):
+        return iter(["index1", "index2"])
+
+
+class TestSearchIndexClientInstrumentation:
+    """Tests for SearchIndexClient span creation."""
+
+    def test_create_index_creates_span(self, exporter):
+        index = MockSearchIndex(name="hotels")
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.create_index",
+            attributes={
+                SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search",
+                SpanAttributes.AZURE_SEARCH_INDEX_NAME: "hotels",
+            },
+        ):
+            client = MockSearchIndexClient("https://test.search.windows.net", MagicMock())
+            client.create_index(index=index)
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].name == "azure_search.create_index"
+        assert spans[0].attributes[SpanAttributes.AZURE_SEARCH_INDEX_NAME] == "hotels"
+
+    def test_list_indexes_creates_span(self, exporter):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.list_indexes",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            client = MockSearchIndexClient("https://test.search.windows.net", MagicMock())
+            list(client.list_indexes())
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].name == "azure_search.list_indexes"
+
+    def test_get_index_creates_span(self, exporter):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.get_index",
+            attributes={
+                SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search",
+                SpanAttributes.AZURE_SEARCH_INDEX_NAME: "hotels",
+            },
+        ):
+            client = MockSearchIndexClient("https://test.search.windows.net", MagicMock())
+            client.get_index("hotels")
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].name == "azure_search.get_index"
+
+    def test_delete_index_creates_span(self, exporter):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.delete_index",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            client = MockSearchIndexClient("https://test.search.windows.net", MagicMock())
+            client.delete_index("hotels")
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].name == "azure_search.delete_index"
+
+    def test_analyze_text_creates_span(self, exporter):
+        analyze_request = MagicMock()
+        analyze_request.analyzer_name = "en.microsoft"
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.analyze_text",
+            attributes={
+                SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search",
+                SpanAttributes.AZURE_SEARCH_INDEX_NAME: "hotels",
+                SpanAttributes.AZURE_SEARCH_ANALYZER_NAME: "en.microsoft",
+            },
+        ):
+            client = MockSearchIndexClient("https://test.search.windows.net", MagicMock())
+            client.analyze_text("hotels", analyze_request)
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].name == "azure_search.analyze_text"
+
+    def test_get_service_statistics_creates_span(self, exporter):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.get_service_statistics",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            client = MockSearchIndexClient("https://test.search.windows.net", MagicMock())
+            client.get_service_statistics()
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].name == "azure_search.get_service_statistics"
+
+    def test_list_index_names_creates_span(self, exporter):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.list_index_names",
+            attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
+        ):
+            client = MockSearchIndexClient("https://test.search.windows.net", MagicMock())
+            list(client.list_index_names())
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].name == "azure_search.list_index_names"
+
+    def test_get_index_statistics_creates_span(self, exporter):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span(
+            "azure_search.get_index_statistics",
+            attributes={
+                SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search",
+                SpanAttributes.AZURE_SEARCH_INDEX_NAME: "hotels",
+            },
+        ):
+            client = MockSearchIndexClient("https://test.search.windows.net", MagicMock())
+            client.get_index_statistics("hotels")
+
+        spans = exporter.get_finished_spans()
+        assert spans[0].name == "azure_search.get_index_statistics"
+
+
+class TestIndexManagementAttributes:
+    """Tests for index management request attribute extraction."""
+
+    def test_index_name_from_object(self, exporter):
+        from opentelemetry.instrumentation.azure_search.wrapper import _set_index_management_attributes
+        index = MagicMock()
+        index.name = "hotels"
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("test") as span:
+            _set_index_management_attributes(span, "create_index", [], {"index": index})
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_INDEX_NAME) == "hotels"
+
+    def test_index_name_from_string(self, exporter):
+        from opentelemetry.instrumentation.azure_search.wrapper import _set_index_management_attributes
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("test") as span:
+            _set_index_management_attributes(span, "get_index", ["hotels"], {})
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_INDEX_NAME) == "hotels"
+
+    def test_analyze_text_sets_analyzer(self, exporter):
+        from opentelemetry.instrumentation.azure_search.wrapper import _set_analyze_text_attributes
+        analyze_req = MagicMock()
+        analyze_req.analyzer_name = "standard.lucene"
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("test") as span:
+            _set_analyze_text_attributes(span, ["hotels", analyze_req], {})
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_ANALYZER_NAME) == "standard.lucene"
+
+    def test_analyze_text_enum_analyzer(self, exporter):
+        from opentelemetry.instrumentation.azure_search.wrapper import _set_analyze_text_attributes
+        enum_val = MagicMock()
+        enum_val.value = "en.microsoft"
+        analyze_req = MagicMock()
+        analyze_req.analyzer_name = enum_val
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("test") as span:
+            _set_analyze_text_attributes(span, ["hotels", analyze_req], {})
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_ANALYZER_NAME) == "en.microsoft"
+
+
+class TestServiceStatisticsResponse:
+    """Tests for get_service_statistics response attributes."""
+
+    def test_service_stats_sets_document_count(self, exporter):
+        from opentelemetry.instrumentation.azure_search.wrapper import _set_service_statistics_response_attributes
+        stats = MockServiceStatistics(document_count=5000, index_count=3)
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("test") as span:
+            _set_service_statistics_response_attributes(span, stats)
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT) == 5000
+
+    def test_service_stats_sets_index_count(self, exporter):
+        from opentelemetry.instrumentation.azure_search.wrapper import _set_service_statistics_response_attributes
+        stats = MockServiceStatistics(document_count=5000, index_count=3)
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("test") as span:
+            _set_service_statistics_response_attributes(span, stats)
+        spans = exporter.get_finished_spans()
+        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SERVICE_INDEX_COUNT) == 3
+
+
+class TestAsyncInstrumentation:
+    """Tests for async wrapper dispatch and dont_throw."""
+
+    def test_async_wrap_dispatches_coroutine(self, exporter):
+        """_wrap should return a coroutine when the wrapped function is async."""
+        import asyncio
+        import inspect
+        from opentelemetry.instrumentation.azure_search.wrapper import _wrap
+
+        tracer = trace.get_tracer(__name__)
+        to_wrap = {"span_name": "azure_search.search", "method": "search"}
+
+        async def async_wrapped(*args, **kwargs):
+            return [{"id": "1"}]
+
+        result = _wrap(tracer, to_wrap)(async_wrapped, MagicMock(_index_name="idx"), [], {})
+        assert inspect.iscoroutine(result)
+        asyncio.get_event_loop().run_until_complete(result)
+
+    def test_async_error_sets_error_status(self, exporter):
+        import asyncio
+        from opentelemetry.instrumentation.azure_search.wrapper import _async_wrap
+        from opentelemetry.trace.status import StatusCode
+
+        tracer = trace.get_tracer(__name__)
+        to_wrap = {"span_name": "azure_search.search", "method": "search"}
+
+        async def failing_async(*args, **kwargs):
+            raise ValueError("async boom")
+
+        async def run():
+            with pytest.raises(ValueError, match="async boom"):
+                await _async_wrap(tracer, to_wrap, failing_async, MagicMock(_index_name="idx"), [], {})
+
+        asyncio.get_event_loop().run_until_complete(run())
+        spans = exporter.get_finished_spans()
+        assert spans[0].status.status_code == StatusCode.ERROR

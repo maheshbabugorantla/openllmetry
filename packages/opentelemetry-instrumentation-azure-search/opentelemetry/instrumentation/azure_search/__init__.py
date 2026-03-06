@@ -81,7 +81,192 @@ SEARCH_CLIENT_METHODS = [
     },
 ]
 
-WRAPPED_METHODS = SEARCH_CLIENT_METHODS
+# Async SearchClient methods (azure.search.documents.aio) — 10 methods
+ASYNC_SEARCH_CLIENT_METHODS = [
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "search",
+        "span_name": "azure_search.search",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "get_document",
+        "span_name": "azure_search.get_document",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "get_document_count",
+        "span_name": "azure_search.get_document_count",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "upload_documents",
+        "span_name": "azure_search.upload_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "merge_documents",
+        "span_name": "azure_search.merge_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "delete_documents",
+        "span_name": "azure_search.delete_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "merge_or_upload_documents",
+        "span_name": "azure_search.merge_or_upload_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "index_documents",
+        "span_name": "azure_search.index_documents",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "autocomplete",
+        "span_name": "azure_search.autocomplete",
+    },
+    {
+        "module": "azure.search.documents.aio",
+        "object": "SearchClient",
+        "method": "suggest",
+        "span_name": "azure_search.suggest",
+    },
+]
+
+# SearchIndexClient methods (azure.search.documents.indexes) — 9 sync (no synonym maps yet)
+SEARCH_INDEX_CLIENT_METHODS = [
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "create_index",
+        "span_name": "azure_search.create_index",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "create_or_update_index",
+        "span_name": "azure_search.create_or_update_index",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "delete_index",
+        "span_name": "azure_search.delete_index",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "get_index",
+        "span_name": "azure_search.get_index",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "list_indexes",
+        "span_name": "azure_search.list_indexes",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "get_index_statistics",
+        "span_name": "azure_search.get_index_statistics",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "analyze_text",
+        "span_name": "azure_search.analyze_text",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "get_service_statistics",
+        "span_name": "azure_search.get_service_statistics",
+    },
+    {
+        "module": "azure.search.documents.indexes",
+        "object": "SearchIndexClient",
+        "method": "list_index_names",
+        "span_name": "azure_search.list_index_names",
+    },
+]
+
+# Async SearchIndexClient methods (azure.search.documents.indexes.aio) — 9 async (no synonym maps yet)
+ASYNC_SEARCH_INDEX_CLIENT_METHODS = [
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "create_index",
+        "span_name": "azure_search.create_index",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "create_or_update_index",
+        "span_name": "azure_search.create_or_update_index",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "delete_index",
+        "span_name": "azure_search.delete_index",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "get_index",
+        "span_name": "azure_search.get_index",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "list_indexes",
+        "span_name": "azure_search.list_indexes",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "get_index_statistics",
+        "span_name": "azure_search.get_index_statistics",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "analyze_text",
+        "span_name": "azure_search.analyze_text",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "get_service_statistics",
+        "span_name": "azure_search.get_service_statistics",
+    },
+    {
+        "module": "azure.search.documents.indexes.aio",
+        "object": "SearchIndexClient",
+        "method": "list_index_names",
+        "span_name": "azure_search.list_index_names",
+    },
+]
+
+WRAPPED_METHODS = (
+    SEARCH_CLIENT_METHODS
+    + ASYNC_SEARCH_CLIENT_METHODS
+    + SEARCH_INDEX_CLIENT_METHODS
+    + ASYNC_SEARCH_INDEX_CLIENT_METHODS
+)
 
 
 class AzureSearchInstrumentor(BaseInstrumentor):
