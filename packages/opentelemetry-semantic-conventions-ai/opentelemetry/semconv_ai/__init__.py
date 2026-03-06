@@ -278,6 +278,25 @@ class SpanAttributes:
     LANGGRAPH_COMMAND_GOTO_NODE = "langgraph.command.goto_node"
     LANGGRAPH_COMMAND_GOTO_NODES = "langgraph.command.goto_nodes"
 
+    # Azure AI Search — core request attributes
+    AZURE_SEARCH_INDEX_NAME = "azure_search.index_name"
+    AZURE_SEARCH_SEARCH_TEXT = "azure_search.search.text"
+    AZURE_SEARCH_SEARCH_TOP = "azure_search.search.top"
+    AZURE_SEARCH_SEARCH_SKIP = "azure_search.search.skip"
+    AZURE_SEARCH_SEARCH_FILTER = "azure_search.search.filter"
+    AZURE_SEARCH_SEARCH_QUERY_TYPE = "azure_search.search.query_type"
+    AZURE_SEARCH_DOCUMENT_COUNT = "azure_search.document.count"
+    AZURE_SEARCH_DOCUMENT_KEY = "azure_search.document.key"
+    AZURE_SEARCH_SUGGESTER_NAME = "azure_search.suggester_name"
+    AZURE_SEARCH_ANALYZER_NAME = "azure_search.analyzer_name"
+
+    # Azure AI Search — core response attributes
+    AZURE_SEARCH_SEARCH_RESULTS_COUNT = "azure_search.search.results_count"
+    AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT = "azure_search.document.succeeded_count"
+    AZURE_SEARCH_DOCUMENT_FAILED_COUNT = "azure_search.document.failed_count"
+    AZURE_SEARCH_AUTOCOMPLETE_RESULTS_COUNT = "azure_search.autocomplete.results_count"
+    AZURE_SEARCH_SUGGEST_RESULTS_COUNT = "azure_search.suggest.results_count"
+
 
 class Events(Enum):
     DB_QUERY_EMBEDDINGS = "db.query.embeddings"
