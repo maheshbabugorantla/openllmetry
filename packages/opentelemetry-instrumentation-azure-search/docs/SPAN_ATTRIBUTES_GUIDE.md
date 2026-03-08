@@ -10,22 +10,26 @@ The instrumentation is split across three modules:
 
 | Module | Responsibility |
 |--------|---------------|
-| `__init__.py` | Method registries (4 lists), `AzureSearchInstrumentor` class |
+| `__init__.py` | Method registries (8 lists, 104 methods), `AzureSearchInstrumentor` class |
 | `wrapper.py` | `_sync_wrap`, `_async_wrap`, extraction functions, response functions |
 | `utils.py` | `dont_throw` decorator (async-aware), `should_send_content()` stub |
 
 ### Module: `__init__.py`
 
-Contains four method lists:
+Contains eight method lists:
 
 ```python
-SEARCH_CLIENT_METHODS             # 10 sync SearchClient methods
-ASYNC_SEARCH_CLIENT_METHODS       # 10 async SearchClient methods (aio)
-SEARCH_INDEX_CLIENT_METHODS       # 9 sync SearchIndexClient methods
-ASYNC_SEARCH_INDEX_CLIENT_METHODS # 9 async SearchIndexClient methods (aio)
+SEARCH_CLIENT_METHODS              # 10 sync SearchClient methods
+ASYNC_SEARCH_CLIENT_METHODS        # 10 async SearchClient methods (aio)
+SEARCH_INDEX_CLIENT_METHODS        # 15 sync SearchIndexClient methods (incl. synonym maps)
+ASYNC_SEARCH_INDEX_CLIENT_METHODS  # 15 async SearchIndexClient methods (aio)
+SEARCH_INDEXER_CLIENT_METHODS      # 21 sync SearchIndexerClient methods
+ASYNC_SEARCH_INDEXER_CLIENT_METHODS # 21 async SearchIndexerClient methods (aio)
+BUFFERED_SENDER_METHODS            # 6 sync SearchIndexingBufferedSender methods
+ASYNC_BUFFERED_SENDER_METHODS      # 6 async SearchIndexingBufferedSender methods (aio)
 ```
 
-`WRAPPED_METHODS` is the concatenation of all four lists. `_instrument()` iterates it and calls `wrap_function_wrapper` for each entry.
+`WRAPPED_METHODS` is the concatenation of all eight lists (104 entries total). `_instrument()` iterates it and calls `wrap_function_wrapper` for each entry.
 
 **Method entry format:**
 
@@ -48,13 +52,34 @@ For async variants, `"module"` becomes `"azure.search.documents.indexes.aio"`.
 
 ```python
 _DOCUMENT_BATCH_METHODS = frozenset({
-    "upload_documents",
-    "merge_documents",
-    "delete_documents",
-    "merge_or_upload_documents",
+    "upload_documents", "merge_documents",
+    "delete_documents", "merge_or_upload_documents",
 })
-
 _SUGGESTION_METHODS = frozenset({"autocomplete", "suggest"})
+_INDEX_MANAGEMENT_METHODS = frozenset({
+    "create_index", "create_or_update_index", "delete_index",
+    "get_index", "list_indexes", "list_index_names",
+    "get_index_statistics", "analyze_text",
+})
+_INDEXER_MANAGEMENT_METHODS = frozenset({
+    "create_indexer", "create_or_update_indexer", "delete_indexer",
+    "get_indexer", "get_indexers", "run_indexer",
+    "reset_indexer", "get_indexer_status",
+})
+_DATA_SOURCE_METHODS = frozenset({
+    "create_data_source_connection", "create_or_update_data_source_connection",
+    "delete_data_source_connection", "get_data_source_connection",
+    "get_data_source_connections",
+})
+_SKILLSET_METHODS = frozenset({
+    "create_skillset", "create_or_update_skillset", "delete_skillset",
+    "get_skillset", "get_skillsets",
+})
+_SYNONYM_MAP_METHODS = frozenset({
+    "create_synonym_map", "create_or_update_synonym_map",
+    "delete_synonym_map", "get_synonym_map",
+    "get_synonym_maps", "get_synonym_map_names",
+})
 ```
 
 These replace `if method == "x" or method == "y"` chains with `if method in _FROZENSET`.
@@ -160,6 +185,11 @@ def dont_throw(func):
 | `_set_analyze_text_attributes` | `analyze_text` | `index_name`, `analyzer_name` (from `AnalyzeTextOptions`) |
 | `_set_vector_search_attributes` | `search` (when `vector_queries` present) | `vector_queries_count`, `vector_fields`, `k_nearest_neighbors`, `vector_query_kind`, `vector_weight`, `vector_oversampling`, `vector_filter_mode`, `vector_exhaustive` |
 | `_set_semantic_search_attributes` | `search` (when semantic params present) | `semantic_configuration_name`, `query_caption`, `query_answer`, `search_mode`, `scoring_profile`, `select`, `search_fields`, `facets`, `order_by` |
+| `_set_indexer_management_attributes` | Indexer management methods | `indexer_name` (from arg or object) |
+| `_set_indexer_status_attributes` | `get_indexer_status` | `indexer_name`, `indexer.status`, `indexer.documents_processed`, `indexer.documents_failed` |
+| `_set_data_source_attributes` | Data source management methods | `data_source_name`, `data_source.type` |
+| `_set_skillset_attributes` | Skillset management methods | `skillset_name`, `skillset.skill_count` |
+| `_set_synonym_map_attributes` | Synonym map methods | `synonym_map.name`, `synonym_map.synonyms_count` |
 
 All extractors are decorated with `@dont_throw` — if extraction fails, the span is still created.
 

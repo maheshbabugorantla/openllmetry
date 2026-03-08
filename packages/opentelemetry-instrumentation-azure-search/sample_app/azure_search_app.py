@@ -225,6 +225,35 @@ def demo_suggest():
         print(f"  Skipped (no suggester configured): {e}")
 
 
+def demo_create_synonym_map():
+    """Create a synonym map — generates azure.search.create_synonym_map span.
+
+    Note: SearchIndexerClient and SearchIndexingBufferedSender are instrumented
+    but not demonstrated in this sample. Add them following the same pattern.
+    """
+    print("\n--- create_synonym_map ---")
+    from azure.search.documents.indexes.models import SynonymMap
+    try:
+        synonym_map = SynonymMap(
+            name="hotel-synonyms",
+            synonyms="luxury, upscale, premium\nbudget, affordable, cheap",
+        )
+        result = index_client.create_synonym_map(synonym_map)
+        print(f"  Created synonym map: {result.name}")
+    except Exception as e:
+        print(f"  Skipped (synonym map may already exist): {e}")
+
+
+def demo_delete_synonym_map():
+    """Delete a synonym map — generates azure.search.delete_synonym_map span."""
+    print("\n--- delete_synonym_map ---")
+    try:
+        index_client.delete_synonym_map("hotel-synonyms")
+        print("  Deleted synonym map: hotel-synonyms")
+    except Exception as e:
+        print(f"  Skipped: {e}")
+
+
 def demo_create_index():
     """Create a new search index — generates azure.search.create_index span."""
     print("\n--- create_index ---")
@@ -290,7 +319,9 @@ def demo_analyze_text():
 
 
 if __name__ == "__main__":
-    # SearchIndexClient operations
+    # SearchIndexClient operations — index and synonym map management
+    demo_create_synonym_map()
+    demo_delete_synonym_map()
     demo_create_index()
     demo_get_index_statistics()
     demo_get_service_statistics()

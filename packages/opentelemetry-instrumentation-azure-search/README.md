@@ -45,6 +45,8 @@ Both sync (`azure.search.documents.SearchClient`) and async (`azure.search.docum
 
 Both sync (`azure.search.documents.indexes.SearchIndexClient`) and async (`azure.search.documents.indexes.aio.SearchIndexClient`) variants are instrumented.
 
+**Index management:**
+
 | Method | Span Name |
 |--------|-----------|
 | `create_index()` | `azure.search.create_index` |
@@ -56,6 +58,70 @@ Both sync (`azure.search.documents.indexes.SearchIndexClient`) and async (`azure
 | `get_index_statistics()` | `azure.search.get_index_statistics` |
 | `get_service_statistics()` | `azure.search.get_service_statistics` |
 | `analyze_text()` | `azure.search.analyze_text` |
+
+**Synonym maps:**
+
+| Method | Span Name |
+|--------|-----------|
+| `create_synonym_map()` | `azure.search.create_synonym_map` |
+| `create_or_update_synonym_map()` | `azure.search.create_or_update_synonym_map` |
+| `delete_synonym_map()` | `azure.search.delete_synonym_map` |
+| `get_synonym_map()` | `azure.search.get_synonym_map` |
+| `get_synonym_maps()` | `azure.search.get_synonym_maps` |
+| `get_synonym_map_names()` | `azure.search.get_synonym_map_names` |
+
+### SearchIndexerClient
+
+Both sync (`azure.search.documents.indexes.SearchIndexerClient`) and async (`azure.search.documents.indexes.aio.SearchIndexerClient`) variants are instrumented.
+
+**Indexer management:**
+
+| Method | Span Name |
+|--------|-----------|
+| `create_indexer()` | `azure.search.create_indexer` |
+| `create_or_update_indexer()` | `azure.search.create_or_update_indexer` |
+| `delete_indexer()` | `azure.search.delete_indexer` |
+| `get_indexer()` | `azure.search.get_indexer` |
+| `get_indexers()` | `azure.search.get_indexers` |
+| `get_indexer_names()` | `azure.search.get_indexer_names` |
+| `run_indexer()` | `azure.search.run_indexer` |
+| `reset_indexer()` | `azure.search.reset_indexer` |
+| `get_indexer_status()` | `azure.search.get_indexer_status` |
+
+**Data source management:**
+
+| Method | Span Name |
+|--------|-----------|
+| `create_data_source_connection()` | `azure.search.create_data_source_connection` |
+| `create_or_update_data_source_connection()` | `azure.search.create_or_update_data_source_connection` |
+| `delete_data_source_connection()` | `azure.search.delete_data_source_connection` |
+| `get_data_source_connection()` | `azure.search.get_data_source_connection` |
+| `get_data_source_connections()` | `azure.search.get_data_source_connections` |
+| `get_data_source_connection_names()` | `azure.search.get_data_source_connection_names` |
+
+**Skillset management:**
+
+| Method | Span Name |
+|--------|-----------|
+| `create_skillset()` | `azure.search.create_skillset` |
+| `create_or_update_skillset()` | `azure.search.create_or_update_skillset` |
+| `delete_skillset()` | `azure.search.delete_skillset` |
+| `get_skillset()` | `azure.search.get_skillset` |
+| `get_skillsets()` | `azure.search.get_skillsets` |
+| `get_skillset_names()` | `azure.search.get_skillset_names` |
+
+### SearchIndexingBufferedSender
+
+Both sync (`azure.search.documents.SearchIndexingBufferedSender`) and async (`azure.search.documents.aio.SearchIndexingBufferedSender`) variants are instrumented.
+
+| Method | Span Name |
+|--------|-----------|
+| `upload_documents()` | `azure.search.upload_documents` |
+| `delete_documents()` | `azure.search.delete_documents` |
+| `merge_documents()` | `azure.search.merge_documents` |
+| `merge_or_upload_documents()` | `azure.search.merge_or_upload_documents` |
+| `index_documents()` | `azure.search.index_documents` |
+| `flush()` | `azure.search.flush` |
 
 ## Span Attributes
 
@@ -105,6 +171,16 @@ Operation-specific attributes:
 | `AZURE_AI_SEARCH_SEARCH_FIELDS` | `azure.search.search.search_fields` | `search` |
 | `AZURE_AI_SEARCH_FACETS` | `azure.search.search.facets` | `search` |
 | `AZURE_AI_SEARCH_ORDER_BY` | `azure.search.search.order_by` | `search` |
+| `AZURE_AI_SEARCH_SYNONYM_MAP_NAME` | `azure.search.synonym_map.name` | `create/get/delete_synonym_map` |
+| `AZURE_AI_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT` | `azure.search.synonym_map.synonyms_count` | `create/update_synonym_map` (response) |
+| `AZURE_AI_SEARCH_INDEXER_NAME` | `azure.search.indexer_name` | Indexer management methods |
+| `AZURE_AI_SEARCH_DATA_SOURCE_NAME` | `azure.search.data_source_name` | Data source management methods |
+| `AZURE_AI_SEARCH_SKILLSET_NAME` | `azure.search.skillset_name` | Skillset management methods |
+| `AZURE_AI_SEARCH_INDEXER_STATUS` | `azure.search.indexer.status` | `get_indexer_status` (response) |
+| `AZURE_AI_SEARCH_DOCUMENTS_PROCESSED` | `azure.search.indexer.documents_processed` | `get_indexer_status` (response) |
+| `AZURE_AI_SEARCH_DOCUMENTS_FAILED` | `azure.search.indexer.documents_failed` | `get_indexer_status` (response) |
+| `AZURE_AI_SEARCH_DATA_SOURCE_TYPE` | `azure.search.data_source.type` | Data source management (response) |
+| `AZURE_AI_SEARCH_SKILLSET_SKILL_COUNT` | `azure.search.skillset.skill_count` | Skillset management (response) |
 
 ## Content Capture
 
