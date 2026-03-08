@@ -411,7 +411,7 @@ class TestResponseAttributes:
         with tracer.start_as_current_span("test") as span:
             _set_search_response_attributes(span, mock_response)
         spans = exporter.get_finished_spans()
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SEARCH_RESULTS_COUNT) is None
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SEARCH_RESULTS_COUNT) is None
 
     def test_empty_batch_response_no_attributes(self, exporter):
         from opentelemetry.instrumentation.azure_search.wrapper import _set_document_batch_response_all
@@ -419,7 +419,7 @@ class TestResponseAttributes:
         with tracer.start_as_current_span("test") as span:
             _set_document_batch_response_all(span, [])
         spans = exporter.get_finished_spans()
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT) is None
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT) is None
 
     def test_document_count_from_int(self, exporter):
         from opentelemetry.instrumentation.azure_search.wrapper import _set_document_count_response_attributes
@@ -643,18 +643,18 @@ class TestSearchIndexClientInstrumentation:
         index = MockSearchIndex(name="upsert-index")
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.create_or_update_index",
+            "azure.search.create_or_update_index",
             attributes={
                 SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search",
-                SpanAttributes.AZURE_SEARCH_INDEX_NAME: "upsert-index",
+                SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME: "upsert-index",
             },
         ):
             client = MockSearchIndexClient("https://test.search.windows.net", MagicMock())
             client.create_or_update_index(index=index)
 
         spans = exporter.get_finished_spans()
-        assert spans[0].name == "azure_search.create_or_update_index"
-        assert spans[0].attributes[SpanAttributes.AZURE_SEARCH_INDEX_NAME] == "upsert-index"
+        assert spans[0].name == "azure.search.create_or_update_index"
+        assert spans[0].attributes[SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME] == "upsert-index"
 
     def test_get_index_creates_span(self, exporter):
         tracer = trace.get_tracer(__name__)
@@ -858,7 +858,7 @@ def _call_sync(tracer, method, mock_fn, instance, args=(), kwargs=None):
     """Call _sync_wrap directly — produces a real instrumented span."""
     from opentelemetry.instrumentation.azure_search.wrapper import _sync_wrap
 
-    to_wrap = {"span_name": f"azure_search.{method}", "method": method}
+    to_wrap = {"span_name": f"azure.search.{method}", "method": method}
     return _sync_wrap(tracer, to_wrap, mock_fn, instance, args, kwargs or {})
 
 
@@ -866,7 +866,7 @@ async def _call_async(tracer, method, mock_fn, instance, args=(), kwargs=None):
     """Call _async_wrap directly — produces a real instrumented span."""
     from opentelemetry.instrumentation.azure_search.wrapper import _async_wrap
 
-    to_wrap = {"span_name": f"azure_search.{method}", "method": method}
+    to_wrap = {"span_name": f"azure.search.{method}", "method": method}
     return await _async_wrap(tracer, to_wrap, mock_fn, instance, args, kwargs or {})
 
 
@@ -929,7 +929,7 @@ class TestVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_vq = MagicMock()
             mock_vq.k_nearest_neighbors = 5
             mock_vq.fields = "content_vector"
@@ -944,19 +944,19 @@ class TestVectorSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_QUERIES_COUNT
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_QUERIES_COUNT
         ) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_K_NEAREST_NEIGHBORS
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_K_NEAREST_NEIGHBORS
         ) == 5
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_FIELDS
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_FIELDS
         ) == "content_vector"
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_EXHAUSTIVE
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_EXHAUSTIVE
         ) is False
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_FILTER_MODE
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_FILTER_MODE
         ) == "preFilter"
 
     def test_vector_search_multiple_queries(self, exporter):
@@ -966,7 +966,7 @@ class TestVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_vq1 = MagicMock()
             mock_vq1.k_nearest_neighbors = 5
             mock_vq1.fields = "title_vector"
@@ -983,11 +983,11 @@ class TestVectorSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_QUERIES_COUNT
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_QUERIES_COUNT
         ) == 2
         # First vector query's fields are captured
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_FIELDS
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_FIELDS
         ) == "title_vector"
 
     def test_vector_search_list_fields(self, exporter):
@@ -997,7 +997,7 @@ class TestVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_vq = MagicMock()
             mock_vq.k_nearest_neighbors = 5
             mock_vq.fields = ["title_vector", "content_vector"]
@@ -1009,7 +1009,7 @@ class TestVectorSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_FIELDS
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_FIELDS
         ) == "title_vector,content_vector"
 
     def test_no_vector_queries_sets_nothing(self, exporter):
@@ -1019,13 +1019,13 @@ class TestVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             _set_vector_search_attributes(span, {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_QUERIES_COUNT
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_QUERIES_COUNT
         ) is None
 
     def test_vector_filter_mode_enum(self, exporter):
@@ -1035,7 +1035,7 @@ class TestVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_vq = MagicMock()
             mock_vq.k_nearest_neighbors = 5
             mock_vq.fields = "vec"
@@ -1053,7 +1053,7 @@ class TestVectorSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_FILTER_MODE
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_FILTER_MODE
         ) == "postFilter"
 
 
@@ -1067,7 +1067,7 @@ class TestEnhancedVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_vq = MagicMock()
             mock_vq.k_nearest_neighbors = 5
             mock_vq.fields = "content_vector"
@@ -1082,7 +1082,7 @@ class TestEnhancedVectorSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_QUERY_KIND
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_QUERY_KIND
         ) == "text"
 
     def test_vectorized_query_kind(self, exporter):
@@ -1092,7 +1092,7 @@ class TestEnhancedVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_vq = MagicMock()
             mock_vq.k_nearest_neighbors = 10
             mock_vq.fields = "embedding"
@@ -1107,7 +1107,7 @@ class TestEnhancedVectorSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_QUERY_KIND
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_QUERY_KIND
         ) == "vector"
 
     def test_vector_weight_captured(self, exporter):
@@ -1117,7 +1117,7 @@ class TestEnhancedVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_vq = MagicMock()
             mock_vq.k_nearest_neighbors = 5
             mock_vq.fields = "vec"
@@ -1132,7 +1132,7 @@ class TestEnhancedVectorSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_WEIGHT
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_WEIGHT
         ) == 0.8
 
     def test_vector_oversampling_captured(self, exporter):
@@ -1142,7 +1142,7 @@ class TestEnhancedVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_vq = MagicMock()
             mock_vq.k_nearest_neighbors = 5
             mock_vq.fields = "vec"
@@ -1157,7 +1157,7 @@ class TestEnhancedVectorSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_VECTOR_OVERSAMPLING
+            SpanAttributes.AZURE_AI_SEARCH_VECTOR_OVERSAMPLING
         ) == 2.0
 
     def test_none_kind_weight_oversampling_not_set(self, exporter):
@@ -1167,7 +1167,7 @@ class TestEnhancedVectorSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_vq = MagicMock()
             mock_vq.k_nearest_neighbors = 5
             mock_vq.fields = "vec"
@@ -1181,9 +1181,9 @@ class TestEnhancedVectorSearchAttributes:
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert SpanAttributes.AZURE_SEARCH_VECTOR_QUERY_KIND not in spans[0].attributes
-        assert SpanAttributes.AZURE_SEARCH_VECTOR_WEIGHT not in spans[0].attributes
-        assert SpanAttributes.AZURE_SEARCH_VECTOR_OVERSAMPLING not in spans[0].attributes
+        assert SpanAttributes.AZURE_AI_SEARCH_VECTOR_QUERY_KIND not in spans[0].attributes
+        assert SpanAttributes.AZURE_AI_SEARCH_VECTOR_WEIGHT not in spans[0].attributes
+        assert SpanAttributes.AZURE_AI_SEARCH_VECTOR_OVERSAMPLING not in spans[0].attributes
 
 
 class TestFacetsAndOrderByAttributes:
@@ -1196,14 +1196,14 @@ class TestFacetsAndOrderByAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             kwargs = {"facets": ["category", "price,interval:10"]}
             _set_search_attributes(span, (), kwargs)
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_FACETS
+            SpanAttributes.AZURE_AI_SEARCH_FACETS
         ) == "category,price,interval:10"
 
     def test_order_by_as_list(self, exporter):
@@ -1213,14 +1213,14 @@ class TestFacetsAndOrderByAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             kwargs = {"order_by": ["price asc", "rating desc"]}
             _set_search_attributes(span, (), kwargs)
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_ORDER_BY
+            SpanAttributes.AZURE_AI_SEARCH_ORDER_BY
         ) == "price asc,rating desc"
 
     def test_facets_none_not_set(self, exporter):
@@ -1230,13 +1230,13 @@ class TestFacetsAndOrderByAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             _set_search_attributes(span, (), {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert SpanAttributes.AZURE_SEARCH_FACETS not in spans[0].attributes
-        assert SpanAttributes.AZURE_SEARCH_ORDER_BY not in spans[0].attributes
+        assert SpanAttributes.AZURE_AI_SEARCH_FACETS not in spans[0].attributes
+        assert SpanAttributes.AZURE_AI_SEARCH_ORDER_BY not in spans[0].attributes
 
 
 class TestSemanticSearchAttributes:
@@ -1249,7 +1249,7 @@ class TestSemanticSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             kwargs = {
                 "semantic_configuration_name": "my-semantic-config",
                 "query_caption": "extractive",
@@ -1260,13 +1260,13 @@ class TestSemanticSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_SEMANTIC_CONFIGURATION_NAME
+            SpanAttributes.AZURE_AI_SEARCH_SEMANTIC_CONFIGURATION_NAME
         ) == "my-semantic-config"
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_QUERY_CAPTION
+            SpanAttributes.AZURE_AI_SEARCH_QUERY_CAPTION
         ) == "extractive"
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_QUERY_ANSWER
+            SpanAttributes.AZURE_AI_SEARCH_QUERY_ANSWER
         ) == "extractive"
 
     def test_semantic_search_enum_values(self, exporter):
@@ -1276,7 +1276,7 @@ class TestSemanticSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_caption = MagicMock()
             mock_caption.value = "extractive"
             mock_answer = MagicMock()
@@ -1292,10 +1292,10 @@ class TestSemanticSearchAttributes:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_QUERY_CAPTION
+            SpanAttributes.AZURE_AI_SEARCH_QUERY_CAPTION
         ) == "extractive"
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_QUERY_ANSWER
+            SpanAttributes.AZURE_AI_SEARCH_QUERY_ANSWER
         ) == "extractive"
 
     def test_no_semantic_config_sets_nothing(self, exporter):
@@ -1305,13 +1305,13 @@ class TestSemanticSearchAttributes:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             _set_semantic_search_attributes(span, {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_SEMANTIC_CONFIGURATION_NAME
+            SpanAttributes.AZURE_AI_SEARCH_SEMANTIC_CONFIGURATION_NAME
         ) is None
 
 
@@ -1325,13 +1325,13 @@ class TestSearchAttributeExtras:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             _set_search_attributes(span, (), {"search_mode": "all"})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_SEARCH_MODE
+            SpanAttributes.AZURE_AI_SEARCH_SEARCH_MODE
         ) == "all"
 
     def test_scoring_profile_attribute(self, exporter):
@@ -1341,13 +1341,13 @@ class TestSearchAttributeExtras:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             _set_search_attributes(span, (), {"scoring_profile": "boost-by-freshness"})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_SCORING_PROFILE
+            SpanAttributes.AZURE_AI_SEARCH_SCORING_PROFILE
         ) == "boost-by-freshness"
 
     def test_select_as_list(self, exporter):
@@ -1357,13 +1357,13 @@ class TestSearchAttributeExtras:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             _set_search_attributes(span, (), {"select": ["id", "name", "rating"]})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_SELECT
+            SpanAttributes.AZURE_AI_SEARCH_SELECT
         ) == "id,name,rating"
 
     def test_select_as_string(self, exporter):
@@ -1373,13 +1373,13 @@ class TestSearchAttributeExtras:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             _set_search_attributes(span, (), {"select": "id,name"})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_SELECT
+            SpanAttributes.AZURE_AI_SEARCH_SELECT
         ) == "id,name"
 
     def test_search_fields_as_list(self, exporter):
@@ -1389,13 +1389,13 @@ class TestSearchAttributeExtras:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             _set_search_attributes(span, (), {"search_fields": ["title", "description"]})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_SEARCH_FIELDS
+            SpanAttributes.AZURE_AI_SEARCH_SEARCH_FIELDS
         ) == "title,description"
 
     def test_query_type_enum(self, exporter):
@@ -1405,7 +1405,7 @@ class TestSearchAttributeExtras:
         )
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.search") as span:
+        with tracer.start_as_current_span("azure.search.search") as span:
             mock_qt = MagicMock()
             mock_qt.value = "semantic"
             _set_search_attributes(span, (), {"query_type": mock_qt})
@@ -1413,7 +1413,7 @@ class TestSearchAttributeExtras:
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
         assert spans[0].attributes.get(
-            SpanAttributes.AZURE_SEARCH_SEARCH_QUERY_TYPE
+            SpanAttributes.AZURE_AI_SEARCH_SEARCH_QUERY_TYPE
         ) == "semantic"
 
 
@@ -1555,7 +1555,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        get_doc_spans = [s for s in spans if s.name == "azure_search.get_document"]
+        get_doc_spans = [s for s in spans if s.name == "azure.search.get_document"]
         assert len(get_doc_spans) == 1
 
         span = get_doc_spans[0]
@@ -1578,7 +1578,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        ac_spans = [s for s in spans if s.name == "azure_search.autocomplete"]
+        ac_spans = [s for s in spans if s.name == "azure.search.autocomplete"]
         assert len(ac_spans) == 1
 
         span = ac_spans[0]
@@ -1599,7 +1599,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        suggest_spans = [s for s in spans if s.name == "azure_search.suggest"]
+        suggest_spans = [s for s in spans if s.name == "azure.search.suggest"]
         assert len(suggest_spans) == 1
 
         span = suggest_spans[0]
@@ -1624,7 +1624,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        upload_spans = [s for s in spans if s.name == "azure_search.upload_documents"]
+        upload_spans = [s for s in spans if s.name == "azure.search.upload_documents"]
         assert len(upload_spans) == 1
 
         span = upload_spans[0]
@@ -1650,7 +1650,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        upload_spans = [s for s in spans if s.name == "azure_search.upload_documents"]
+        upload_spans = [s for s in spans if s.name == "azure.search.upload_documents"]
         assert len(upload_spans) == 1
 
         span = upload_spans[0]
@@ -1683,7 +1683,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        search_spans = [s for s in spans if s.name == "azure_search.search"]
+        search_spans = [s for s in spans if s.name == "azure.search.search"]
         assert len(search_spans) == 1
 
         span = search_spans[0]
@@ -1715,7 +1715,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        search_spans = [s for s in spans if s.name == "azure_search.search"]
+        search_spans = [s for s in spans if s.name == "azure.search.search"]
         assert len(search_spans) == 1
 
         span = search_spans[0]
@@ -1786,7 +1786,7 @@ class TestContentCapture:
             context_api.detach(token)
 
         spans = exporter.get_finished_spans()
-        get_doc_spans = [s for s in spans if s.name == "azure_search.get_document"]
+        get_doc_spans = [s for s in spans if s.name == "azure.search.get_document"]
         assert len(get_doc_spans) == 1
 
         span = get_doc_spans[0]
@@ -1813,7 +1813,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        idx_spans = [s for s in spans if s.name == "azure_search.index_documents"]
+        idx_spans = [s for s in spans if s.name == "azure.search.index_documents"]
         assert len(idx_spans) == 1
 
         span = idx_spans[0]
@@ -1837,7 +1837,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        merge_spans = [s for s in spans if s.name == "azure_search.merge_documents"]
+        merge_spans = [s for s in spans if s.name == "azure.search.merge_documents"]
         assert len(merge_spans) == 1
 
         span = merge_spans[0]
@@ -1858,7 +1858,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        del_spans = [s for s in spans if s.name == "azure_search.delete_documents"]
+        del_spans = [s for s in spans if s.name == "azure.search.delete_documents"]
         assert len(del_spans) == 1
 
         span = del_spans[0]
@@ -1879,7 +1879,7 @@ class TestContentCapture:
         )
 
         spans = exporter.get_finished_spans()
-        mou_spans = [s for s in spans if s.name == "azure_search.merge_or_upload_documents"]
+        mou_spans = [s for s in spans if s.name == "azure.search.merge_or_upload_documents"]
         assert len(mou_spans) == 1
 
         span = mou_spans[0]
@@ -1926,16 +1926,16 @@ class TestSyncWorkflows:
             )
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 2
         _assert_all_same_trace(azure_spans)
 
-        upload_span = _find_span(azure_spans, "azure_search.upload_documents")
+        upload_span = _find_span(azure_spans, "azure.search.upload_documents")
         assert upload_span.kind == SpanKind.CLIENT
         assert upload_span.status.status_code == StatusCode.OK
-        assert upload_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT] == 3
-        assert upload_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 3
-        assert upload_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_FAILED_COUNT] == 0
+        assert upload_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT] == 3
+        assert upload_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 3
+        assert upload_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_FAILED_COUNT] == 0
 
         attrs = dict(upload_span.attributes)
         doc0 = json.loads(attrs[f"{EventAttributes.DB_QUERY_RESULT_DOCUMENT.value}.0"])
@@ -1943,12 +1943,12 @@ class TestSyncWorkflows:
         doc2 = json.loads(attrs[f"{EventAttributes.DB_QUERY_RESULT_DOCUMENT.value}.2"])
         assert doc2["name"] == "Cozy Motel"
 
-        search_span = _find_span(azure_spans, "azure_search.search")
+        search_span = _find_span(azure_spans, "azure.search.search")
         assert search_span.kind == SpanKind.CLIENT
         assert search_span.status.status_code == StatusCode.OK
-        assert search_span.attributes[SpanAttributes.AZURE_SEARCH_SEARCH_TEXT] == "hotel"
-        assert search_span.attributes[SpanAttributes.AZURE_SEARCH_SEARCH_TOP] == 5
-        assert search_span.attributes[SpanAttributes.AZURE_SEARCH_SEARCH_FILTER] == "rating ge 4"
+        assert search_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SEARCH_TEXT] == "hotel"
+        assert search_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SEARCH_TOP] == 5
+        assert search_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SEARCH_FILTER] == "rating ge 4"
 
     def test_document_lifecycle(self, exporter):
         """Full CRUD lifecycle: upload -> get -> merge -> get -> delete."""
@@ -1989,19 +1989,19 @@ class TestSyncWorkflows:
             )
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 5
         _assert_all_same_trace(azure_spans)
 
         for s in azure_spans:
             assert s.status.status_code == StatusCode.OK
 
-        upload_span = _find_span(azure_spans, "azure_search.upload_documents")
+        upload_span = _find_span(azure_spans, "azure.search.upload_documents")
         attrs = dict(upload_span.attributes)
         doc = json.loads(attrs[f"{EventAttributes.DB_QUERY_RESULT_DOCUMENT.value}.0"])
         assert doc["rating"] == 3.0
 
-        get_spans = [s for s in azure_spans if s.name == "azure_search.get_document"]
+        get_spans = [s for s in azure_spans if s.name == "azure.search.get_document"]
         assert len(get_spans) == 2
         first_get_doc = json.loads(
             dict(get_spans[0].attributes)[EventAttributes.DB_QUERY_RESULT_DOCUMENT.value]
@@ -2013,15 +2013,15 @@ class TestSyncWorkflows:
         )
         assert second_get_doc["rating"] == 4.5
 
-        merge_span = _find_span(azure_spans, "azure_search.merge_documents")
+        merge_span = _find_span(azure_spans, "azure.search.merge_documents")
         merge_doc = json.loads(
             dict(merge_span.attributes)[f"{EventAttributes.DB_QUERY_RESULT_DOCUMENT.value}.0"]
         )
         assert merge_doc["rating"] == 4.5
 
-        delete_span = _find_span(azure_spans, "azure_search.delete_documents")
-        assert delete_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT] == 1
-        assert delete_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 1
+        delete_span = _find_span(azure_spans, "azure.search.delete_documents")
+        assert delete_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT] == 1
+        assert delete_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 1
 
     def test_typeahead_pipeline(self, exporter):
         """Upload -> autocomplete -> suggest -- typeahead debugging."""
@@ -2058,17 +2058,17 @@ class TestSyncWorkflows:
             )
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 3
         _assert_all_same_trace(azure_spans)
 
         for s in azure_spans:
             assert s.status.status_code == StatusCode.OK
 
-        ac_span = _find_span(azure_spans, "azure_search.autocomplete")
-        assert ac_span.attributes[SpanAttributes.AZURE_SEARCH_SEARCH_TEXT] == "lux"
-        assert ac_span.attributes[SpanAttributes.AZURE_SEARCH_SUGGESTER_NAME] == "sg"
-        assert ac_span.attributes[SpanAttributes.AZURE_SEARCH_AUTOCOMPLETE_RESULTS_COUNT] == 2
+        ac_span = _find_span(azure_spans, "azure.search.autocomplete")
+        assert ac_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SEARCH_TEXT] == "lux"
+        assert ac_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SUGGESTER_NAME] == "sg"
+        assert ac_span.attributes[SpanAttributes.AZURE_AI_SEARCH_AUTOCOMPLETE_RESULTS_COUNT] == 2
 
         ac_attrs = dict(ac_span.attributes)
         entity_0 = json.loads(ac_attrs[f"{EventAttributes.DB_SEARCH_RESULT_ENTITY.value}.0"])
@@ -2076,9 +2076,9 @@ class TestSyncWorkflows:
         entity_1 = json.loads(ac_attrs[f"{EventAttributes.DB_SEARCH_RESULT_ENTITY.value}.1"])
         assert entity_1["text"] == "luxurious"
 
-        sg_span = _find_span(azure_spans, "azure_search.suggest")
-        assert sg_span.attributes[SpanAttributes.AZURE_SEARCH_SEARCH_TEXT] == "lux"
-        assert sg_span.attributes[SpanAttributes.AZURE_SEARCH_SUGGEST_RESULTS_COUNT] == 1
+        sg_span = _find_span(azure_spans, "azure.search.suggest")
+        assert sg_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SEARCH_TEXT] == "lux"
+        assert sg_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SUGGEST_RESULTS_COUNT] == 1
 
     def test_bulk_ingestion_partial_failure(self, exporter):
         """Upload 5 docs where 2 fail -- trace shows which docs failed and why."""
@@ -2114,14 +2114,14 @@ class TestSyncWorkflows:
             )
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 1
 
         span = azure_spans[0]
         assert span.status.status_code == StatusCode.OK
-        assert span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT] == 5
-        assert span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 3
-        assert span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_FAILED_COUNT] == 2
+        assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT] == 5
+        assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 3
+        assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_FAILED_COUNT] == 2
 
         attrs = dict(span.attributes)
         for i in range(5):
@@ -2182,27 +2182,27 @@ class TestSyncWorkflows:
             )
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 5
         _assert_all_same_trace(azure_spans)
 
         for s in azure_spans:
             assert s.status.status_code == StatusCode.OK
 
-        create_span = _find_span(azure_spans, "azure_search.create_index")
-        assert create_span.attributes[SpanAttributes.AZURE_SEARCH_INDEX_NAME] == "pipeline-test"
+        create_span = _find_span(azure_spans, "azure.search.create_index")
+        assert create_span.attributes[SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME] == "pipeline-test"
 
-        upload_span = _find_span(azure_spans, "azure_search.upload_documents")
-        assert upload_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT] == 2
+        upload_span = _find_span(azure_spans, "azure.search.upload_documents")
+        assert upload_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT] == 2
 
-        count_span = _find_span(azure_spans, "azure_search.get_document_count")
-        assert count_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT] == 2
+        count_span = _find_span(azure_spans, "azure.search.get_document_count")
+        assert count_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT] == 2
 
-        search_span = _find_span(azure_spans, "azure_search.search")
-        assert search_span.attributes[SpanAttributes.AZURE_SEARCH_INDEX_NAME] == "pipeline-test"
+        search_span = _find_span(azure_spans, "azure.search.search")
+        assert search_span.attributes[SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME] == "pipeline-test"
 
-        delete_span = _find_span(azure_spans, "azure_search.delete_index")
-        assert delete_span.attributes[SpanAttributes.AZURE_SEARCH_INDEX_NAME] == "pipeline-test"
+        delete_span = _find_span(azure_spans, "azure.search.delete_index")
+        assert delete_span.attributes[SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME] == "pipeline-test"
 
     def test_content_privacy_across_pipeline(self, exporter, monkeypatch):
         """Full pipeline with content disabled -- verify no PII leaks."""
@@ -2248,7 +2248,7 @@ class TestSyncWorkflows:
             )
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 4
         _assert_all_same_trace(azure_spans)
 
@@ -2263,14 +2263,14 @@ class TestSyncWorkflows:
                 f"Content leaked in span '{s.name}': {content_keys}"
             )
 
-        upload_span = _find_span(azure_spans, "azure_search.upload_documents")
-        assert upload_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT] == 1
+        upload_span = _find_span(azure_spans, "azure.search.upload_documents")
+        assert upload_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT] == 1
 
-        get_span = _find_span(azure_spans, "azure_search.get_document")
-        assert get_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_KEY] == "priv-1"
+        get_span = _find_span(azure_spans, "azure.search.get_document")
+        assert get_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_KEY] == "priv-1"
 
-        ac_span = _find_span(azure_spans, "azure_search.autocomplete")
-        assert ac_span.attributes[SpanAttributes.AZURE_SEARCH_SUGGESTER_NAME] == "sg"
+        ac_span = _find_span(azure_spans, "azure.search.autocomplete")
+        assert ac_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SUGGESTER_NAME] == "sg"
 
     def test_error_then_retry_success(self, exporter):
         """First call fails, retry succeeds -- trace shows both for diagnosis."""
@@ -2302,7 +2302,7 @@ class TestSyncWorkflows:
             )
 
         spans = _get_spans(exporter)
-        search_spans = [s for s in spans if s.name == "azure_search.search"]
+        search_spans = [s for s in spans if s.name == "azure.search.search"]
         assert len(search_spans) == 2
         _assert_all_same_trace(search_spans)
 
@@ -2354,24 +2354,24 @@ class TestAsyncWorkflows:
         asyncio.get_event_loop().run_until_complete(run())
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 2
         _assert_all_same_trace(azure_spans)
 
-        upload_span = _find_span(azure_spans, "azure_search.upload_documents")
+        upload_span = _find_span(azure_spans, "azure.search.upload_documents")
         assert upload_span.kind == SpanKind.CLIENT
         assert upload_span.status.status_code == StatusCode.OK
-        assert upload_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT] == 3
-        assert upload_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 3
+        assert upload_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT] == 3
+        assert upload_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 3
 
         attrs = dict(upload_span.attributes)
         doc0 = json.loads(attrs[f"{EventAttributes.DB_QUERY_RESULT_DOCUMENT.value}.0"])
         assert doc0["id"] == "h1"
 
-        search_span = _find_span(azure_spans, "azure_search.search")
+        search_span = _find_span(azure_spans, "azure.search.search")
         assert search_span.status.status_code == StatusCode.OK
-        assert search_span.attributes[SpanAttributes.AZURE_SEARCH_SEARCH_TEXT] == "hotel"
-        assert search_span.attributes[SpanAttributes.AZURE_SEARCH_SEARCH_TOP] == 5
+        assert search_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SEARCH_TEXT] == "hotel"
+        assert search_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SEARCH_TOP] == 5
 
     def test_document_lifecycle(self, exporter):
         """Async: upload -> get -> merge -> get -> delete -- CRUD audit trail."""
@@ -2425,14 +2425,14 @@ class TestAsyncWorkflows:
         asyncio.get_event_loop().run_until_complete(run())
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 5
         _assert_all_same_trace(azure_spans)
 
         for s in azure_spans:
             assert s.status.status_code == StatusCode.OK
 
-        get_spans = [s for s in azure_spans if s.name == "azure_search.get_document"]
+        get_spans = [s for s in azure_spans if s.name == "azure.search.get_document"]
         first_doc = json.loads(
             dict(get_spans[0].attributes)[EventAttributes.DB_QUERY_RESULT_DOCUMENT.value]
         )
@@ -2479,19 +2479,19 @@ class TestAsyncWorkflows:
         asyncio.get_event_loop().run_until_complete(run())
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 3
         _assert_all_same_trace(azure_spans)
 
-        ac_span = _find_span(azure_spans, "azure_search.autocomplete")
-        assert ac_span.attributes[SpanAttributes.AZURE_SEARCH_AUTOCOMPLETE_RESULTS_COUNT] == 1
+        ac_span = _find_span(azure_spans, "azure.search.autocomplete")
+        assert ac_span.attributes[SpanAttributes.AZURE_AI_SEARCH_AUTOCOMPLETE_RESULTS_COUNT] == 1
         entity_0 = json.loads(
             dict(ac_span.attributes)[f"{EventAttributes.DB_SEARCH_RESULT_ENTITY.value}.0"]
         )
         assert entity_0["text"] == "luxury"
 
-        sg_span = _find_span(azure_spans, "azure_search.suggest")
-        assert sg_span.attributes[SpanAttributes.AZURE_SEARCH_SUGGEST_RESULTS_COUNT] == 1
+        sg_span = _find_span(azure_spans, "azure.search.suggest")
+        assert sg_span.attributes[SpanAttributes.AZURE_AI_SEARCH_SUGGEST_RESULTS_COUNT] == 1
 
     def test_bulk_ingestion_partial_failure(self, exporter):
         """Async: upload 5 docs, 2 fail -- per-document failure metadata."""
@@ -2522,12 +2522,12 @@ class TestAsyncWorkflows:
         asyncio.get_event_loop().run_until_complete(run())
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 1
 
         span = azure_spans[0]
-        assert span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 3
-        assert span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_FAILED_COUNT] == 2
+        assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 3
+        assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_FAILED_COUNT] == 2
 
         attrs = dict(span.attributes)
         meta_3 = json.loads(attrs[f"{EventAttributes.DB_QUERY_RESULT_METADATA.value}.3"])
@@ -2583,15 +2583,15 @@ class TestAsyncWorkflows:
         asyncio.get_event_loop().run_until_complete(run())
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 5
         _assert_all_same_trace(azure_spans)
 
         for s in azure_spans:
             assert s.status.status_code == StatusCode.OK
 
-        create_span = _find_span(azure_spans, "azure_search.create_index")
-        assert create_span.attributes[SpanAttributes.AZURE_SEARCH_INDEX_NAME] == "pipeline-test"
+        create_span = _find_span(azure_spans, "azure.search.create_index")
+        assert create_span.attributes[SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME] == "pipeline-test"
 
     def test_content_privacy_across_pipeline(self, exporter, monkeypatch):
         """Async: full pipeline with content disabled -- no PII leaks."""
@@ -2645,7 +2645,7 @@ class TestAsyncWorkflows:
         asyncio.get_event_loop().run_until_complete(run())
 
         spans = _get_spans(exporter)
-        azure_spans = [s for s in spans if s.name.startswith("azure_search.")]
+        azure_spans = [s for s in spans if s.name.startswith("azure.search.")]
         assert len(azure_spans) == 4
         _assert_all_same_trace(azure_spans)
 
@@ -2658,8 +2658,8 @@ class TestAsyncWorkflows:
             ]
             assert content_keys == [], f"Content leaked in '{s.name}': {content_keys}"
 
-        upload_span = _find_span(azure_spans, "azure_search.upload_documents")
-        assert upload_span.attributes[SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT] == 1
+        upload_span = _find_span(azure_spans, "azure.search.upload_documents")
+        assert upload_span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT] == 1
 
     def test_error_then_retry_success(self, exporter):
         """Async: first call fails, retry succeeds -- transient failure diagnosis."""
@@ -2694,7 +2694,7 @@ class TestAsyncWorkflows:
         asyncio.get_event_loop().run_until_complete(run())
 
         spans = _get_spans(exporter)
-        search_spans = [s for s in spans if s.name == "azure_search.search"]
+        search_spans = [s for s in spans if s.name == "azure.search.search"]
         assert len(search_spans) == 2
         _assert_all_same_trace(search_spans)
 
