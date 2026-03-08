@@ -2745,13 +2745,13 @@ class TestSynonymMapInstrumentation:
         sm = MockSynonymMap(name="my-synonyms", synonyms=["hotel,motel", "cozy,comfortable"])
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.create_synonym_map") as span:
+        with tracer.start_as_current_span("azure.search.create_synonym_map") as span:
             _set_synonym_map_attributes(span, "create_synonym_map", (sm,), {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "my-synonyms"
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT) == 2
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME) == "my-synonyms"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT) == 2
 
     def test_create_or_update_synonym_map_span(self, exporter):
         """Test create_or_update_synonym_map creates span with synonym_map_name."""
@@ -2763,13 +2763,13 @@ class TestSynonymMapInstrumentation:
         sm = MockSynonymMap(name="updated-synonyms", synonyms=["big,large", "small,tiny", "fast,quick"])
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.create_or_update_synonym_map") as span:
+        with tracer.start_as_current_span("azure.search.create_or_update_synonym_map") as span:
             _set_synonym_map_attributes(span, "create_or_update_synonym_map", (), {"synonym_map": sm})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "updated-synonyms"
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT) == 3
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME) == "updated-synonyms"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT) == 3
 
     def test_delete_synonym_map_span(self, exporter):
         """Test delete_synonym_map creates span with synonym_map_name from string arg."""
@@ -2779,12 +2779,12 @@ class TestSynonymMapInstrumentation:
         from opentelemetry import trace
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.delete_synonym_map") as span:
+        with tracer.start_as_current_span("azure.search.delete_synonym_map") as span:
             _set_synonym_map_attributes(span, "delete_synonym_map", ("my-synonyms",), {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "my-synonyms"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME) == "my-synonyms"
 
     def test_get_synonym_map_span(self, exporter):
         """Test get_synonym_map creates span with synonym_map_name from kwarg."""
@@ -2794,12 +2794,12 @@ class TestSynonymMapInstrumentation:
         from opentelemetry import trace
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.get_synonym_map") as span:
+        with tracer.start_as_current_span("azure.search.get_synonym_map") as span:
             _set_synonym_map_attributes(span, "get_synonym_map", (), {"name": "my-synonyms"})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "my-synonyms"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME) == "my-synonyms"
 
     def test_get_synonym_maps_span(self, exporter):
         """Test get_synonym_maps creates span with correct span name."""
@@ -2809,12 +2809,12 @@ class TestSynonymMapInstrumentation:
         from opentelemetry import trace
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.get_synonym_maps") as span:
+        with tracer.start_as_current_span("azure.search.get_synonym_maps") as span:
             _set_synonym_map_attributes(span, "get_synonym_maps", (), {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.get_synonym_maps"
+        assert spans[0].name == "azure.search.get_synonym_maps"
 
     def test_get_synonym_map_names_span(self, exporter):
         """Test get_synonym_map_names creates span with correct span name."""
@@ -2824,12 +2824,12 @@ class TestSynonymMapInstrumentation:
         from opentelemetry import trace
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.get_synonym_map_names") as span:
+        with tracer.start_as_current_span("azure.search.get_synonym_map_names") as span:
             _set_synonym_map_attributes(span, "get_synonym_map_names", (), {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.get_synonym_map_names"
+        assert spans[0].name == "azure.search.get_synonym_map_names"
 
     def test_create_synonym_map_synonyms_count(self, exporter):
         """Test create_synonym_map extracts synonyms_count from SynonymMap.synonyms list."""
@@ -2841,11 +2841,11 @@ class TestSynonymMapInstrumentation:
         sm = MockSynonymMap(name="test", synonyms=["a,b", "c,d", "e,f", "g,h"])
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.create_synonym_map") as span:
+        with tracer.start_as_current_span("azure.search.create_synonym_map") as span:
             _set_synonym_map_attributes(span, "create_synonym_map", (sm,), {})
 
         spans = exporter.get_finished_spans()
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT) == 4
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT) == 4
 
     def test_synonym_map_with_positional_args(self, exporter):
         """Test synonym map with positional args works correctly."""
@@ -2855,11 +2855,11 @@ class TestSynonymMapInstrumentation:
         from opentelemetry import trace
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.get_synonym_map") as span:
+        with tracer.start_as_current_span("azure.search.get_synonym_map") as span:
             _set_synonym_map_attributes(span, "get_synonym_map", ("positional-name",), {})
 
         spans = exporter.get_finished_spans()
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "positional-name"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME) == "positional-name"
 
     def test_delete_synonym_map_with_object_arg(self, exporter):
         """Test delete_synonym_map handles SynonymMap object passed instead of string."""
@@ -2871,11 +2871,11 @@ class TestSynonymMapInstrumentation:
         sm = MockSynonymMap(name="object-synonym-map")
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.delete_synonym_map") as span:
+        with tracer.start_as_current_span("azure.search.delete_synonym_map") as span:
             _set_synonym_map_attributes(span, "delete_synonym_map", (sm,), {})
 
         spans = exporter.get_finished_spans()
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME) == "object-synonym-map"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME) == "object-synonym-map"
 
 
 class TestServiceStatisticsInstrumentation:
@@ -2891,13 +2891,13 @@ class TestServiceStatisticsInstrumentation:
         response = MockServiceStatistics(document_count=5000, index_count=3)
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.get_service_statistics") as span:
+        with tracer.start_as_current_span("azure.search.get_service_statistics") as span:
             _set_service_statistics_response_attributes(span, response)
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT) == 5000
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_SERVICE_INDEX_COUNT) == 3
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SERVICE_DOCUMENT_COUNT) == 5000
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_SERVICE_INDEX_COUNT) == 3
 
     def test_service_statistics_none_response(self, exporter):
         """Test get_service_statistics handles None response gracefully."""
@@ -2907,12 +2907,12 @@ class TestServiceStatisticsInstrumentation:
         from opentelemetry import trace
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.get_service_statistics") as span:
+        with tracer.start_as_current_span("azure.search.get_service_statistics") as span:
             _set_service_statistics_response_attributes(span, None)
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT not in spans[0].attributes
+        assert SpanAttributes.AZURE_AI_SEARCH_SERVICE_DOCUMENT_COUNT not in spans[0].attributes
 
     def test_service_statistics_no_counters(self, exporter):
         """Test get_service_statistics handles response without counters."""
@@ -2924,12 +2924,12 @@ class TestServiceStatisticsInstrumentation:
         response = MagicMock(spec=[])  # No attributes at all
 
         tracer = trace.get_tracer(__name__)
-        with tracer.start_as_current_span("azure_search.get_service_statistics") as span:
+        with tracer.start_as_current_span("azure.search.get_service_statistics") as span:
             _set_service_statistics_response_attributes(span, response)
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT not in spans[0].attributes
+        assert SpanAttributes.AZURE_AI_SEARCH_SERVICE_DOCUMENT_COUNT not in spans[0].attributes
 
 
 class TestBufferedSenderInstrumentation:
@@ -2946,16 +2946,16 @@ class TestBufferedSenderInstrumentation:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.upload_documents",
+            "azure.search.upload_documents",
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ) as span:
             _set_document_batch_attributes(span, (documents,), {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.upload_documents"
+        assert spans[0].name == "azure.search.upload_documents"
         assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 3
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT) == 3
 
     def test_buffered_delete_documents_span(self, exporter):
         """Test delete_documents on BufferedSender creates span with document count."""
@@ -2968,15 +2968,15 @@ class TestBufferedSenderInstrumentation:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.delete_documents",
+            "azure.search.delete_documents",
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ) as span:
             _set_document_batch_attributes(span, (), {"documents": documents})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.delete_documents"
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 2
+        assert spans[0].name == "azure.search.delete_documents"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT) == 2
 
     def test_buffered_merge_documents_span(self, exporter):
         """Test merge_documents on BufferedSender creates span with document count."""
@@ -2989,15 +2989,15 @@ class TestBufferedSenderInstrumentation:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.merge_documents",
+            "azure.search.merge_documents",
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ) as span:
             _set_document_batch_attributes(span, (documents,), {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.merge_documents"
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 1
+        assert spans[0].name == "azure.search.merge_documents"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT) == 1
 
     def test_buffered_merge_or_upload_documents_span(self, exporter):
         """Test merge_or_upload_documents on BufferedSender creates span with document count."""
@@ -3010,15 +3010,15 @@ class TestBufferedSenderInstrumentation:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.merge_or_upload_documents",
+            "azure.search.merge_or_upload_documents",
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ) as span:
             _set_document_batch_attributes(span, (documents,), {})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.merge_or_upload_documents"
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 4
+        assert spans[0].name == "azure.search.merge_or_upload_documents"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT) == 4
 
     def test_buffered_index_documents_span(self, exporter):
         """Test index_documents on BufferedSender creates span with batch action count."""
@@ -3032,15 +3032,15 @@ class TestBufferedSenderInstrumentation:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.index_documents",
+            "azure.search.index_documents",
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ) as span:
             _set_index_documents_attributes(span, (), {"batch": batch})
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.index_documents"
-        assert spans[0].attributes.get(SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT) == 3
+        assert spans[0].name == "azure.search.index_documents"
+        assert spans[0].attributes.get(SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT) == 3
 
     def test_buffered_flush_span(self, exporter):
         """Test flush creates span 'azure_search.flush'."""
@@ -3048,14 +3048,14 @@ class TestBufferedSenderInstrumentation:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.flush",
+            "azure.search.flush",
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ):
             pass
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.flush"
+        assert spans[0].name == "azure.search.flush"
         assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
 
     def test_buffered_sender_db_system(self, exporter):
@@ -3064,7 +3064,7 @@ class TestBufferedSenderInstrumentation:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.upload_documents",
+            "azure.search.upload_documents",
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ):
             pass
@@ -3106,7 +3106,7 @@ class TestNameOnlyListingMethods:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.list_index_names",
+            "azure.search.list_index_names",
             kind=trace.SpanKind.CLIENT,
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ):
@@ -3114,7 +3114,7 @@ class TestNameOnlyListingMethods:
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.list_index_names"
+        assert spans[0].name == "azure.search.list_index_names"
         assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
 
     def test_get_indexer_names_span(self, exporter):
@@ -3123,7 +3123,7 @@ class TestNameOnlyListingMethods:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.get_indexer_names",
+            "azure.search.get_indexer_names",
             kind=trace.SpanKind.CLIENT,
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ):
@@ -3131,7 +3131,7 @@ class TestNameOnlyListingMethods:
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.get_indexer_names"
+        assert spans[0].name == "azure.search.get_indexer_names"
         assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
 
     def test_get_data_source_connection_names_span(self, exporter):
@@ -3140,7 +3140,7 @@ class TestNameOnlyListingMethods:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.get_data_source_connection_names",
+            "azure.search.get_data_source_connection_names",
             kind=trace.SpanKind.CLIENT,
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ):
@@ -3148,7 +3148,7 @@ class TestNameOnlyListingMethods:
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.get_data_source_connection_names"
+        assert spans[0].name == "azure.search.get_data_source_connection_names"
         assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
 
     def test_get_skillset_names_span(self, exporter):
@@ -3157,7 +3157,7 @@ class TestNameOnlyListingMethods:
 
         tracer = trace.get_tracer(__name__)
         with tracer.start_as_current_span(
-            "azure_search.get_skillset_names",
+            "azure.search.get_skillset_names",
             kind=trace.SpanKind.CLIENT,
             attributes={SpanAttributes.VECTOR_DB_VENDOR: "Azure AI Search"},
         ):
@@ -3165,7 +3165,7 @@ class TestNameOnlyListingMethods:
 
         spans = exporter.get_finished_spans()
         assert len(spans) == 1
-        assert spans[0].name == "azure_search.get_skillset_names"
+        assert spans[0].name == "azure.search.get_skillset_names"
         assert spans[0].attributes.get(SpanAttributes.VECTOR_DB_VENDOR) == "Azure AI Search"
 
     def test_name_only_methods_in_init(self):
@@ -3196,5 +3196,5 @@ class TestNameOnlyListingMethods:
 
         for method in ["list_index_names", "get_indexer_names",
                        "get_data_source_connection_names", "get_skillset_names", "flush"]:
-            with tracer.start_as_current_span(f"azure_search.{method}") as span:
+            with tracer.start_as_current_span(f"azure.search.{method}") as span:
                 _set_request_attributes(span, method, instance, (), {})

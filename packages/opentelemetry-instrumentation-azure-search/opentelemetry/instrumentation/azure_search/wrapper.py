@@ -459,7 +459,7 @@ def _set_indexer_management_attributes(span, method, args, kwargs):
         if indexer_name and not isinstance(indexer_name, str):
             indexer_name = getattr(indexer_name, "name", None)
 
-    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEXER_NAME, indexer_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEXER_NAME, indexer_name)
 
 
 @dont_throw
@@ -468,14 +468,14 @@ def _set_indexer_status_attributes(span, args, kwargs, response):
     if response:
         status = getattr(response, "status", None)
         if status:
-            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEXER_STATUS, str(status))
+            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEXER_STATUS, str(status))
 
         last_result = getattr(response, "last_result", None)
         if last_result:
             items_processed = getattr(last_result, "items_processed", None)
             items_failed = getattr(last_result, "items_failed", None)
-            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENTS_PROCESSED, items_processed)
-            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DOCUMENTS_FAILED, items_failed)
+            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DOCUMENTS_PROCESSED, items_processed)
+            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DOCUMENTS_FAILED, items_failed)
 
 
 @dont_throw
@@ -499,8 +499,8 @@ def _set_data_source_attributes(span, method, args, kwargs):
         if data_source_name and not isinstance(data_source_name, str):
             data_source_name = getattr(data_source_name, "name", None)
 
-    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DATA_SOURCE_NAME, data_source_name)
-    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_DATA_SOURCE_TYPE, data_source_type)
+    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DATA_SOURCE_NAME, data_source_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_DATA_SOURCE_TYPE, data_source_type)
 
 
 @dont_throw
@@ -521,8 +521,8 @@ def _set_skillset_attributes(span, method, args, kwargs):
         if skillset_name and not isinstance(skillset_name, str):
             skillset_name = getattr(skillset_name, "name", None)
 
-    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SKILLSET_NAME, skillset_name)
-    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SKILLSET_SKILL_COUNT, skill_count)
+    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SKILLSET_NAME, skillset_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SKILLSET_SKILL_COUNT, skill_count)
 
 
 @dont_throw
@@ -547,8 +547,8 @@ def _set_synonym_map_attributes(span, method, args, kwargs):
         if synonym_map_name and not isinstance(synonym_map_name, str):
             synonym_map_name = getattr(synonym_map_name, "name", None)
 
-    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_NAME, synonym_map_name)
-    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT, synonyms_count)
+    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME, synonym_map_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT, synonyms_count)
 
 
 # --- Response attribute extraction ---
