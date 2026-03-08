@@ -11,14 +11,22 @@ import os
 import pytest
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import IndexDocumentsBatch, SearchClient
-from azure.search.documents.indexes import SearchIndexClient
+from azure.search.documents.indexes import SearchIndexClient, SearchIndexerClient
 from azure.search.documents.indexes.models import (
     AnalyzeTextOptions,
+    InputFieldMappingEntry,
+    LanguageDetectionSkill,
+    OutputFieldMappingEntry,
     SearchFieldDataType,
     SearchIndex,
+    SearchIndexer,
+    SearchIndexerDataContainer,
+    SearchIndexerDataSourceConnection,
+    SearchIndexerSkillset,
     SearchSuggester,
     SearchableField,
     SimpleField,
+    SynonymMap,
 )
 from opentelemetry.semconv_ai import EventAttributes, SpanAttributes
 from opentelemetry.trace import SpanKind, StatusCode
@@ -91,6 +99,13 @@ def _make_search_client(index_name=INTEGRATION_TEST_INDEX):
     return SearchClient(
         endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
         index_name=index_name,
+        credential=AzureKeyCredential(os.environ["AZURE_SEARCH_ADMIN_KEY"]),
+    )
+
+
+def _make_indexer_client():
+    return SearchIndexerClient(
+        endpoint=os.environ["AZURE_SEARCH_ENDPOINT"],
         credential=AzureKeyCredential(os.environ["AZURE_SEARCH_ADMIN_KEY"]),
     )
 
@@ -537,3 +552,290 @@ class TestSearchIndexClientIntegration:
         assert isinstance(doc_count, int)
         assert isinstance(idx_count, int)
         assert idx_count >= 1  # At least the integration test index exists
+
+
+# ---------------------------------------------------------------------------
+# TestSynonymMapIntegration
+# ---------------------------------------------------------------------------
+
+class TestSynonymMapIntegration:
+    """Integration tests for synonym map CRUD operations."""
+
+    @pytest.fixture
+    def index_client(self):
+        return _make_index_client()
+
+    # -- CRUD --
+
+    @pytest.mark.vcr
+    def test_create_synonym_map(self, exporter, index_client):
+        """create_synonym_map captures name and synonym count."""
+        sm_name = "otel-test-synonyms"
+
+        try:
+            index_client.delete_synonym_map(sm_name)
+        except Exception:
+            pass
+        exporter.clear()
+
+        index_client.create_synonym_map(
+            SynonymMap(name=sm_name, synonyms=["hotel,motel", "cozy,comfortable,warm"]),
+        )
+
+        try:
+            span = _get_only_span(exporter, "azure.search.create_synonym_map")
+            _assert_base_span(span, "azure.search.create_synonym_map")
+            assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME] == sm_name
+            assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT] == 2
+        finally:
+            try:
+                index_client.delete_synonym_map(sm_name)
+            except Exception:
+                pass
+
+    @pytest.mark.vcr
+    def test_create_or_update_synonym_map(self, exporter, index_client):
+        """create_or_update_synonym_map captures name and synonym count."""
+        sm_name = "otel-test-upsert-sm"
+
+        index_client.create_or_update_synonym_map(
+            SynonymMap(name=sm_name, synonyms=["fast,quick", "slow,sluggish"]),
+        )
+
+        try:
+            span = _get_only_span(exporter, "azure.search.create_or_update_synonym_map")
+            _assert_base_span(span, "azure.search.create_or_update_synonym_map")
+            assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME] == sm_name
+            assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT] == 2
+        finally:
+            try:
+                index_client.delete_synonym_map(sm_name)
+            except Exception:
+                pass
+
+    @pytest.mark.vcr
+    def test_get_synonym_map(self, exporter, index_client):
+        """get_synonym_map captures the synonym map name."""
+        sm_name = "otel-test-get-sm"
+
+        try:
+            index_client.create_synonym_map(SynonymMap(name=sm_name, synonyms=["big,large"]))
+        except Exception:
+            pass
+        exporter.clear()
+
+        index_client.get_synonym_map(sm_name)
+
+        try:
+            span = _get_only_span(exporter, "azure.search.get_synonym_map")
+            _assert_base_span(span, "azure.search.get_synonym_map")
+            assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME] == sm_name
+        finally:
+            try:
+                index_client.delete_synonym_map(sm_name)
+            except Exception:
+                pass
+
+    @pytest.mark.vcr
+    def test_get_synonym_maps(self, exporter, index_client):
+        """get_synonym_maps produces a span with vendor attribute."""
+        sm_name = "otel-test-list-sms"
+
+        try:
+            index_client.create_synonym_map(
+                SynonymMap(name=sm_name, synonyms=["hello,hi", "goodbye,bye"]),
+            )
+        except Exception:
+            pass
+        exporter.clear()
+
+        index_client.get_synonym_maps()
+
+        try:
+            span = _get_only_span(exporter, "azure.search.get_synonym_maps")
+            _assert_base_span(span, "azure.search.get_synonym_maps")
+        finally:
+            try:
+                index_client.delete_synonym_map(sm_name)
+            except Exception:
+                pass
+
+    @pytest.mark.vcr
+    def test_get_synonym_map_names(self, exporter, index_client):
+        """get_synonym_map_names produces a span with vendor attribute."""
+        sm_name = "otel-test-list-sm-names"
+
+        try:
+            index_client.create_synonym_map(SynonymMap(name=sm_name, synonyms=["warm,cozy"]))
+        except Exception:
+            pass
+        exporter.clear()
+
+        index_client.get_synonym_map_names()
+
+        try:
+            span = _get_only_span(exporter, "azure.search.get_synonym_map_names")
+            _assert_base_span(span, "azure.search.get_synonym_map_names")
+        finally:
+            try:
+                index_client.delete_synonym_map(sm_name)
+            except Exception:
+                pass
+
+    @pytest.mark.vcr
+    def test_delete_synonym_map(self, exporter, index_client):
+        """delete_synonym_map captures the synonym map name."""
+        sm_name = "otel-test-delete-sm"
+
+        try:
+            index_client.create_synonym_map(SynonymMap(name=sm_name, synonyms=["old,ancient"]))
+        except Exception:
+            pass
+        exporter.clear()
+
+        index_client.delete_synonym_map(sm_name)
+
+        span = _get_only_span(exporter, "azure.search.delete_synonym_map")
+        _assert_base_span(span, "azure.search.delete_synonym_map")
+        assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_SYNONYM_MAP_NAME] == sm_name
+
+
+# ---------------------------------------------------------------------------
+# TestSearchIndexerClientIntegration
+# ---------------------------------------------------------------------------
+
+class TestSearchIndexerClientIntegration:
+    """Integration tests for SearchIndexerClient name-only listing methods.
+
+    NOTE: The data source and indexer setup uses placeholder credentials that fail
+    with 400 during recording. The cassettes still capture the listing calls with
+    empty results, which is sufficient to verify span creation. Re-record with
+    valid Azure Storage credentials to test non-empty listings.
+    """
+
+    @pytest.fixture(scope="class")
+    def index_client_setup(self):
+        return _make_index_client()
+
+    @pytest.fixture(scope="class", autouse=True)
+    def setup_test_index(self, index_client_setup):
+        fields = [
+            SimpleField(name="id", type=SearchFieldDataType.String, key=True),
+            SearchableField(name="name", type=SearchFieldDataType.String),
+        ]
+        _setup_index(index_client_setup, fields)
+        yield
+        _teardown_index(index_client_setup)
+
+    @pytest.fixture
+    def indexer_client(self):
+        return _make_indexer_client()
+
+    @pytest.mark.vcr
+    def test_get_indexer_names(self, exporter, indexer_client):
+        """get_indexer_names produces a span even with failed setup (placeholder credentials)."""
+        ds_name = "otel-test-indexer-ds"
+        indexer_name = "otel-test-indexer-names"
+
+        ds_connection = SearchIndexerDataSourceConnection(
+            name=ds_name,
+            type="azureblob",
+            connection_string=os.environ.get(
+                "AZURE_STORAGE_CONNECTION_STRING",
+                "DefaultEndpointsProtocol=https;AccountName=placeholder;"
+                "AccountKey=placeholder;EndpointSuffix=core.windows.net",
+            ),
+            container=SearchIndexerDataContainer(name="placeholder-container"),
+        )
+        indexer = SearchIndexer(
+            name=indexer_name,
+            data_source_name=ds_name,
+            target_index_name=INTEGRATION_TEST_INDEX,
+            is_disabled=True,
+        )
+        try:
+            indexer_client.create_data_source_connection(ds_connection)
+            indexer_client.create_indexer(indexer)
+        except Exception:
+            pass  # Expected to fail with placeholder credentials
+        exporter.clear()
+
+        try:
+            list(indexer_client.get_indexer_names())
+
+            span = _get_only_span(exporter, "azure.search.get_indexer_names")
+            _assert_base_span(span, "azure.search.get_indexer_names")
+        finally:
+            for name, delete_fn in [
+                (indexer_name, indexer_client.delete_indexer),
+                (ds_name, indexer_client.delete_data_source_connection),
+            ]:
+                try:
+                    delete_fn(name)
+                except Exception:
+                    pass
+
+    @pytest.mark.vcr
+    def test_get_data_source_connection_names(self, exporter, indexer_client):
+        """get_data_source_connection_names produces a span."""
+        ds_name = "otel-test-ds-names"
+
+        ds_connection = SearchIndexerDataSourceConnection(
+            name=ds_name,
+            type="azureblob",
+            connection_string=os.environ.get(
+                "AZURE_STORAGE_CONNECTION_STRING",
+                "DefaultEndpointsProtocol=https;AccountName=placeholder;"
+                "AccountKey=placeholder;EndpointSuffix=core.windows.net",
+            ),
+            container=SearchIndexerDataContainer(name="placeholder-container"),
+        )
+        try:
+            indexer_client.create_data_source_connection(ds_connection)
+        except Exception:
+            pass  # Expected to fail with placeholder credentials
+        exporter.clear()
+
+        try:
+            list(indexer_client.get_data_source_connection_names())
+
+            span = _get_only_span(exporter, "azure.search.get_data_source_connection_names")
+            _assert_base_span(span, "azure.search.get_data_source_connection_names")
+        finally:
+            try:
+                indexer_client.delete_data_source_connection(ds_name)
+            except Exception:
+                pass
+
+    @pytest.mark.vcr
+    def test_get_skillset_names(self, exporter, indexer_client):
+        """get_skillset_names produces a span (skillset creation succeeds without storage)."""
+        skillset_name = "otel-test-skillset-names"
+
+        skillset = SearchIndexerSkillset(
+            name=skillset_name,
+            skills=[
+                LanguageDetectionSkill(
+                    name="language-detection",
+                    inputs=[InputFieldMappingEntry(name="text", source="/document/content")],
+                    outputs=[OutputFieldMappingEntry(name="languageCode", target_name="languageCode")],
+                ),
+            ],
+            description="Test skillset for OTel integration tests",
+        )
+        try:
+            indexer_client.create_skillset(skillset)
+        except Exception:
+            pass
+        exporter.clear()
+
+        try:
+            list(indexer_client.get_skillset_names())
+
+            span = _get_only_span(exporter, "azure.search.get_skillset_names")
+            _assert_base_span(span, "azure.search.get_skillset_names")
+        finally:
+            try:
+                indexer_client.delete_skillset(skillset_name)
+            except Exception:
+                pass
