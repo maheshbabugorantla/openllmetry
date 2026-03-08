@@ -149,6 +149,8 @@ async def _async_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
         },
         set_status_on_exception=False,
     ) as span:
+        span.set_attribute(OTelSpanAttributes.DB_SYSTEM, SpanAttributes.AZURE_AI_SEARCH_DB_SYSTEM_NAME)
+        span.set_attribute(OTelSpanAttributes.DB_OPERATION, method)
         _set_request_attributes(span, method, instance, args, kwargs)
 
         # Content capture is stubbed (should_send_content() always False in PR3)
@@ -240,20 +242,20 @@ def _set_index_management_attributes(span, method, args, kwargs):
         index = kwargs.get("index") or (args[0] if args else None)
         if index:
             index_name = getattr(index, "name", None)
-            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
+            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, index_name)
     elif method in ["delete_index", "get_index", "get_index_statistics"]:
         index_name = kwargs.get("index") or kwargs.get("index_name") or (args[0] if args else None)
         if isinstance(index_name, str):
-            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
+            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, index_name)
         elif hasattr(index_name, "name"):
-            _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name.name)
+            _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, index_name.name)
 
 
 @dont_throw
 def _set_analyze_text_attributes(span, args, kwargs):
     """Set attributes for analyze_text operation."""
     index_name = kwargs.get("index_name") or (args[0] if args else None)
-    _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_INDEX_NAME, index_name)
+    _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, index_name)
 
     analyze_request = kwargs.get("analyze_request") or (args[1] if len(args) > 1 else None)
     analyzer_name = None
@@ -267,7 +269,7 @@ def _set_analyze_text_attributes(span, args, kwargs):
     if analyzer_name:
         if hasattr(analyzer_name, "value"):
             analyzer_name = analyzer_name.value
-        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_ANALYZER_NAME, str(analyzer_name))
+        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_ANALYZER_NAME, str(analyzer_name))
 
 
 # --- Response attribute extraction ---
@@ -298,7 +300,7 @@ async def _set_search_response_attributes_async(span, response):
     else:
         total = count_fn()
     if total is not None:
-        _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SEARCH_RESULTS_COUNT, total)
+        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SEARCH_RESULTS_COUNT, total)
 
 
 @dont_throw
@@ -335,13 +337,13 @@ def _set_service_statistics_response_attributes(span, response):
         if doc_counter:
             usage = _deep_get(doc_counter, "usage")
             if usage is not None:
-                _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SERVICE_DOCUMENT_COUNT, usage)
+                _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SERVICE_DOCUMENT_COUNT, usage)
 
         index_counter = _deep_get(counters, "index_counter")
         if index_counter:
             usage = _deep_get(index_counter, "usage")
             if usage is not None:
-                _set_span_attribute(span, SpanAttributes.AZURE_SEARCH_SERVICE_INDEX_COUNT, usage)
+                _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_SERVICE_INDEX_COUNT, usage)
 
 
 def _set_indexing_response_single_pass(span, results):
