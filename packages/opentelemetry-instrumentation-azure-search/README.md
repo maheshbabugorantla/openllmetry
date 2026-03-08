@@ -26,6 +26,8 @@ The instrumentor hooks into the Azure AI Search Python SDK and automatically gen
 
 ### SearchClient
 
+Both sync (`azure.search.documents.SearchClient`) and async (`azure.search.documents.aio.SearchClient`) variants are instrumented.
+
 | Method | Span Name |
 |--------|-----------|
 | `search()` | `azure.search.search` |
@@ -38,6 +40,22 @@ The instrumentor hooks into the Azure AI Search Python SDK and automatically gen
 | `index_documents()` | `azure.search.index_documents` |
 | `autocomplete()` | `azure.search.autocomplete` |
 | `suggest()` | `azure.search.suggest` |
+
+### SearchIndexClient
+
+Both sync (`azure.search.documents.indexes.SearchIndexClient`) and async (`azure.search.documents.indexes.aio.SearchIndexClient`) variants are instrumented.
+
+| Method | Span Name |
+|--------|-----------|
+| `create_index()` | `azure.search.create_index` |
+| `create_or_update_index()` | `azure.search.create_or_update_index` |
+| `delete_index()` | `azure.search.delete_index` |
+| `get_index()` | `azure.search.get_index` |
+| `list_indexes()` | `azure.search.list_indexes` |
+| `list_index_names()` | `azure.search.list_index_names` |
+| `get_index_statistics()` | `azure.search.get_index_statistics` |
+| `get_service_statistics()` | `azure.search.get_service_statistics` |
+| `analyze_text()` | `azure.search.analyze_text` |
 
 ## Span Attributes
 
@@ -67,6 +85,42 @@ Operation-specific attributes:
 | `AZURE_AI_SEARCH_DOCUMENT_FAILED_COUNT` | `azure.search.document.failed_count` | Batch indexing (response) |
 | `AZURE_AI_SEARCH_AUTOCOMPLETE_RESULTS_COUNT` | `azure.search.autocomplete.results_count` | `autocomplete` (response) |
 | `AZURE_AI_SEARCH_SUGGEST_RESULTS_COUNT` | `azure.search.suggest.results_count` | `suggest` (response) |
+| `AZURE_AI_SEARCH_ANALYZER_NAME` | `azure.search.analyzer_name` | `analyze_text` |
+| `AZURE_AI_SEARCH_SERVICE_DOCUMENT_COUNT` | `azure.search.service.document_count` | `get_service_statistics` (response) |
+| `AZURE_AI_SEARCH_SERVICE_INDEX_COUNT` | `azure.search.service.index_count` | `get_service_statistics` (response) |
+
+## Async Usage
+
+The async `SearchClient` and `SearchIndexClient` are instrumented identically to their sync counterparts. Use them in any `async` context:
+
+```python
+import asyncio
+from azure.search.documents.aio import SearchClient
+from azure.search.documents.indexes.aio import SearchIndexClient
+from azure.core.credentials import AzureKeyCredential
+from opentelemetry.instrumentation.azure_search import AzureSearchInstrumentor
+
+AzureSearchInstrumentor().instrument()
+
+async def main():
+    async with SearchClient(
+        endpoint="https://my-search.search.windows.net",
+        index_name="hotels",
+        credential=AzureKeyCredential("api-key"),
+    ) as client:
+        results = client.search(search_text="luxury")
+        async for result in results:
+            print(result["hotel_name"])
+
+    async with SearchIndexClient(
+        endpoint="https://my-search.search.windows.net",
+        credential=AzureKeyCredential("api-key"),
+    ) as index_client:
+        stats = await index_client.get_service_statistics()
+        print(stats)
+
+asyncio.run(main())
+```
 
 ## Example
 

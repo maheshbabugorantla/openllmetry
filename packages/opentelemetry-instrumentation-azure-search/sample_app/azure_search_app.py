@@ -1,8 +1,8 @@
 """
-Azure AI Search instrumentation sample app — SearchClient operations.
+Azure AI Search instrumentation sample app — SearchClient + SearchIndexClient operations.
 
-This app demonstrates automatic OpenTelemetry tracing for the most common
-SearchClient operations. Spans are printed to the console via ConsoleSpanExporter.
+This app demonstrates automatic OpenTelemetry tracing for SearchClient and
+SearchIndexClient operations. Spans are printed to the console via ConsoleSpanExporter.
 
 Prerequisites:
     pip install opentelemetry-instrumentation-azure-search
@@ -19,6 +19,14 @@ import os
 
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
+from azure.search.documents.indexes import SearchIndexClient
+from azure.search.documents.indexes.models import (
+    AnalyzeTextOptions,
+    SearchField,
+    SearchFieldDataType,
+    SearchIndex,
+    SimpleField,
+)
 from azure.search.documents.models import AutocompleteMode
 from opentelemetry.instrumentation.azure_search import AzureSearchInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
@@ -37,10 +45,17 @@ ENDPOINT = os.environ.get("AZURE_SEARCH_ENDPOINT", "https://my-search.search.win
 API_KEY = os.environ.get("AZURE_SEARCH_API_KEY", "placeholder-key")
 INDEX_NAME = os.environ.get("AZURE_SEARCH_INDEX_NAME", "hotels")
 
+credential = AzureKeyCredential(API_KEY)
+
 client = SearchClient(
     endpoint=ENDPOINT,
     index_name=INDEX_NAME,
-    credential=AzureKeyCredential(API_KEY),
+    credential=credential,
+)
+
+index_client = SearchIndexClient(
+    endpoint=ENDPOINT,
+    credential=credential,
 )
 
 # --- Sample data ---
@@ -151,7 +166,78 @@ def demo_suggest():
         print(f"  Skipped (no suggester configured): {e}")
 
 
+def demo_create_index():
+    """Create a new search index — generates azure.search.create_index span."""
+    print("\n--- create_index ---")
+    index = SearchIndex(
+        name=INDEX_NAME,
+        fields=[
+            SimpleField(name="hotel_id", type=SearchFieldDataType.String, key=True),
+            SearchField(
+                name="hotel_name",
+                type=SearchFieldDataType.String,
+                searchable=True,
+            ),
+            SearchField(
+                name="description",
+                type=SearchFieldDataType.String,
+                searchable=True,
+            ),
+            SimpleField(name="rating", type=SearchFieldDataType.Double, filterable=True),
+        ],
+    )
+    try:
+        result = index_client.create_index(index)
+        print(f"  Created index: {result.name}")
+    except Exception as e:
+        print(f"  Skipped (index may already exist): {e}")
+
+
+def demo_get_index_statistics():
+    """Get per-index statistics — generates azure.search.get_index_statistics span."""
+    print("\n--- get_index_statistics ---")
+    try:
+        stats = index_client.get_index_statistics(INDEX_NAME)
+        print(f"  document_count={stats.document_count}  storage_size={stats.storage_size}")
+    except Exception as e:
+        print(f"  Skipped: {e}")
+
+
+def demo_get_service_statistics():
+    """Get service-level statistics — generates azure.search.get_service_statistics span."""
+    print("\n--- get_service_statistics ---")
+    try:
+        stats = index_client.get_service_statistics()
+        print(f"  counters={stats.counters}")
+    except Exception as e:
+        print(f"  Skipped: {e}")
+
+
+def demo_analyze_text():
+    """Analyze text with an analyzer — generates azure.search.analyze_text span."""
+    print("\n--- analyze_text ---")
+    try:
+        result = index_client.analyze_text(
+            index_name=INDEX_NAME,
+            analyze_request=AnalyzeTextOptions(
+                text="Luxury hotels with stunning ocean views",
+                analyzer_name="en.lucene",
+            ),
+        )
+        tokens = [t.token for t in result.tokens]
+        print(f"  Tokens: {tokens}")
+    except Exception as e:
+        print(f"  Skipped: {e}")
+
+
 if __name__ == "__main__":
+    # SearchIndexClient operations
+    demo_create_index()
+    demo_get_index_statistics()
+    demo_get_service_statistics()
+    demo_analyze_text()
+
+    # SearchClient operations
     demo_upload_documents()
     demo_get_document()
     demo_get_document_count()

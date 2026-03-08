@@ -10,27 +10,37 @@ The instrumentation is split across three modules:
 
 | Module | Responsibility |
 |--------|---------------|
-| `__init__.py` | Method registry (`SEARCH_CLIENT_METHODS`), `AzureSearchInstrumentor` class |
-| `wrapper.py` | `_sync_wrap`, extraction functions, response functions |
-| `utils.py` | `dont_throw` decorator, `should_send_content()` stub |
+| `__init__.py` | Method registries (4 lists), `AzureSearchInstrumentor` class |
+| `wrapper.py` | `_sync_wrap`, `_async_wrap`, extraction functions, response functions |
+| `utils.py` | `dont_throw` decorator (async-aware), `should_send_content()` stub |
 
 ### Module: `__init__.py`
 
-Contains one method list:
+Contains four method lists:
 
 ```python
-SEARCH_CLIENT_METHODS = [
-    {
-        "module": "azure.search.documents",
-        "object": "SearchClient",
-        "method": "search",
-        "span_name": "azure.search.search",
-    },
-    # ... 9 more methods
-]
+SEARCH_CLIENT_METHODS             # 10 sync SearchClient methods
+ASYNC_SEARCH_CLIENT_METHODS       # 10 async SearchClient methods (aio)
+SEARCH_INDEX_CLIENT_METHODS       # 9 sync SearchIndexClient methods
+ASYNC_SEARCH_INDEX_CLIENT_METHODS # 9 async SearchIndexClient methods (aio)
 ```
 
-`_instrument()` iterates `WRAPPED_METHODS` (= `SEARCH_CLIENT_METHODS`) and calls `wrap_function_wrapper` for each entry.
+`WRAPPED_METHODS` is the concatenation of all four lists. `_instrument()` iterates it and calls `wrap_function_wrapper` for each entry.
+
+**Method entry format:**
+
+```python
+{
+    "module": "azure.search.documents.indexes",
+    "object": "SearchIndexClient",
+    "method": "create_index",
+    "span_name": "azure.search.create_index",
+}
+```
+
+For async variants, `"module"` becomes `"azure.search.documents.indexes.aio"`.
+
+`_instrument()` iterates `WRAPPED_METHODS` and calls `wrap_function_wrapper` for each entry.
 
 ### Module: `wrapper.py`
 
@@ -78,9 +88,57 @@ def _sync_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
         return response
 ```
 
+### Module: `wrapper.py` — `_async_wrap`
+
+The async wrapper mirrors `_sync_wrap` but uses `await` for the underlying call and for async response methods:
+
+```python
+async def _async_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
+    name = to_wrap.get("span_name")
+    method = to_wrap.get("method")
+
+    with tracer.start_as_current_span(name, kind=SpanKind.CLIENT, ...) as span:
+        span.set_attribute(OTelSpanAttributes.DB_SYSTEM, ...)
+        _set_request_attributes(span, method, instance, args, kwargs)
+
+        try:
+            response = await wrapped(*args, **kwargs)
+        except Exception as e:
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            raise
+
+        # search response needs async variant — get_count() is a coroutine
+        if method == "search":
+            await _set_search_response_attributes_async(span, response)
+        else:
+            _set_response_attributes(span, method, response, args, kwargs)
+
+        span.set_status(Status(StatusCode.OK))
+        return response
+```
+
+**Key async gotcha:** `AsyncSearchItemPaged.get_count()` is a coroutine and must be `await`ed. `_set_search_response_attributes_async` is the async variant that does this correctly.
+
 ### Module: `utils.py`
 
-**`dont_throw` decorator** — wraps attribute extraction functions so that any exception is logged instead of propagating. Works for both sync and async functions (detects via `asyncio.iscoroutinefunction`).
+**`dont_throw` decorator** — wraps attribute extraction functions so that any exception is logged instead of propagating. Detects async functions via `asyncio.iscoroutinefunction` and returns the appropriate wrapper:
+
+```python
+def dont_throw(func):
+    async def async_wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            _handle_exception(e, func, logger)
+
+    def sync_wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            _handle_exception(e, func, logger)
+
+    return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+```
 
 **`should_send_content()`** — always returns `False` in this release. Full content capture will be added in a future release.
 
@@ -98,6 +156,8 @@ def _sync_wrap(tracer, to_wrap, wrapped, instance, args, kwargs):
 | `_set_document_batch_attributes` | `upload/merge/delete_documents`, `merge_or_upload_documents` | `document.count` |
 | `_set_index_documents_attributes` | `index_documents` | `document.count` (from `batch.actions`) |
 | `_set_suggestion_attributes` | `autocomplete`, `suggest` | `search.text`, `suggester_name` |
+| `_set_index_management_attributes` | `create/update/delete/get/list_index*` | `index_name` (positional or keyword) |
+| `_set_analyze_text_attributes` | `analyze_text` | `index_name`, `analyzer_name` (from `AnalyzeTextOptions`) |
 
 All extractors are decorated with `@dont_throw` — if extraction fails, the span is still created.
 
@@ -105,13 +165,33 @@ All extractors are decorated with `@dont_throw` — if extraction fails, the spa
 
 | Function | Triggered By | Attributes Set |
 |----------|-------------|----------------|
-| `_set_search_response_attributes` | `search` | `search.results_count` (via `response.get_count()`) |
+| `_set_search_response_attributes` | `search` (sync) | `search.results_count` (via `response.get_count()`) |
+| `_set_search_response_attributes_async` | `search` (async) | `search.results_count` (awaits `response.get_count()`) |
 | `_set_document_count_response_attributes` | `get_document_count` | `document.count` |
 | `_set_autocomplete_response_attributes` | `autocomplete` | `autocomplete.results_count` |
 | `_set_suggest_response_attributes` | `suggest` | `suggest.results_count` |
+| `_set_service_statistics_response_attributes` | `get_service_statistics` | `service.document_count`, `service.index_count` (via `_deep_get`) |
 | `_set_indexing_response_single_pass` | Called by batch handlers | `document.succeeded_count`, `document.failed_count` |
 | `_set_document_batch_response_all` | `upload/merge/delete_documents`, `merge_or_upload_documents` | Delegates to single-pass counter |
 | `_set_index_documents_response_all` | `index_documents` | Delegates to single-pass counter |
+
+**`_deep_get(obj, key)`** — traverses a nested object/dict by dot-separated key path:
+
+```python
+def _deep_get(obj, key):
+    for part in key.split("."):
+        if obj is None:
+            return None
+        if hasattr(obj, part):
+            obj = getattr(obj, part)
+        elif isinstance(obj, dict):
+            obj = obj.get(part)
+        else:
+            return None
+    return obj
+```
+
+Used to extract `counters.document_count` and `counters.index_count` from `ServiceStatistics` without hard-coding attribute access chains.
 
 **Single-pass batch counting:**
 
@@ -236,8 +316,41 @@ Use `hasattr(documents, "__len__")` rather than `isinstance(documents, list)` to
 
 ---
 
+## Pattern 3 — Index Management (SearchIndexClient)
+
+For methods that take an index object as the first argument:
+
+```python
+@dont_throw
+def _set_index_management_attributes(span, method, args, kwargs):
+    # Methods like create_index(index=...) or delete_index(index_name=...)
+    index_obj = kwargs.get("index") or (args[0] if args else None)
+    if index_obj is not None:
+        name = getattr(index_obj, "name", None) or index_obj
+        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME, name)
+```
+
+The `name` fallback handles both cases: an `Index` object (with `.name`) and a plain string (`delete_index("hotels")`).
+
+## Pattern 4 — Complex Nested Parameters
+
+For methods like `analyze_text` that use a request model:
+
+```python
+@dont_throw
+def _set_analyze_text_attributes(span, args, kwargs):
+    analyze_request = kwargs.get("analyze_request") or (args[1] if len(args) > 1 else None)
+    if analyze_request:
+        analyzer = getattr(analyze_request, "analyzer_name", None)
+        _set_span_attribute(span, SpanAttributes.AZURE_AI_SEARCH_ANALYZER_NAME, analyzer)
+```
+
+Use `getattr(obj, "field", None)` to safely read from SDK model objects without isinstance checks.
+
+---
+
 ## Notes
 
 - **Content capture** (`should_send_content`) is stubbed to `False` in this release. Full content capture (request/response documents as indexed span attributes) will be added in a future release.
-- **No async support yet.** All methods are synchronous. Async instrumentation (`_async_wrap`) will be added in a future release.
-- **Tests** use `MockSearchClient` with manual span creation rather than full SDK wrapping. VCR cassettes are not needed for unit tests; they are used for integration-level cassette tests.
+- **Async support** is now available via `_async_wrap` for `SearchClient.aio` and `SearchIndexClient.aio` methods.
+- **Tests** use `MockSearchClient` / `MockSearchIndexClient` with manual span creation rather than full SDK wrapping. VCR cassettes are not needed for unit tests; they are used for integration-level cassette tests.
