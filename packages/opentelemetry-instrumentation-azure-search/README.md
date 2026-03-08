@@ -14,6 +14,8 @@ pip install opentelemetry-instrumentation-azure-search
 
 ## Usage
 
+### Automatic Instrumentation
+
 ```python
 from opentelemetry.instrumentation.azure_search import AzureSearchInstrumentor
 
@@ -21,6 +23,30 @@ AzureSearchInstrumentor().instrument()
 ```
 
 The instrumentor hooks into the Azure AI Search Python SDK and automatically generates OpenTelemetry spans for every instrumented operation. No changes to your application code are required beyond calling `instrument()`.
+
+### With Traceloop SDK
+
+When using the [Traceloop SDK](https://github.com/traceloop/openllmetry), Azure AI Search instrumentation is automatically registered — no manual call to `AzureSearchInstrumentor().instrument()` is needed:
+
+```python
+from traceloop.sdk import Traceloop
+from traceloop.sdk.decorators import workflow, task
+
+Traceloop.init(app_name="my-search-app")
+
+@workflow(name="hotel-search")
+def find_hotels(query: str):
+    client = SearchClient(
+        endpoint="https://my-search.search.windows.net",
+        index_name="hotels",
+        credential=AzureKeyCredential("api-key"),
+    )
+    return list(client.search(search_text=query, top=5))
+```
+
+All Azure AI Search spans will be nested under the `hotel-search` workflow span in your trace.
+
+See [`packages/sample-app/`](../../sample-app/) for a full working example with both sync and async patterns.
 
 ## Instrumented Operations
 
