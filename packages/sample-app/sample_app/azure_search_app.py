@@ -10,12 +10,20 @@ Demonstrates OpenTelemetry instrumentation for Azure AI Search operations:
 - Synonym map management
 - Index and service statistics
 
+Note: SearchIndexerClient (indexers, data sources, skillsets) and
+SearchIndexingBufferedSender are instrumented but not demonstrated here.
+
 Prerequisites:
     pip install azure-search-documents traceloop-sdk
 
 Environment variables:
-    AZURE_SEARCH_ENDPOINT - Azure Search service endpoint
+    AZURE_SEARCH_ENDPOINT  - Azure Search service endpoint
     AZURE_SEARCH_ADMIN_KEY - Azure Search admin API key
+
+Optional content capture tuning:
+    TRACELOOP_TRACE_CONTENT          - Enable/disable content capture (default: true)
+    TRACELOOP_TRACE_CONTENT_MAX_ITEMS   - Max items captured per span (default: 100)
+    TRACELOOP_TRACE_CONTENT_MAX_LENGTH  - Max characters per attribute (default: 16384)
 
 Run:
     python azure_search_app.py
