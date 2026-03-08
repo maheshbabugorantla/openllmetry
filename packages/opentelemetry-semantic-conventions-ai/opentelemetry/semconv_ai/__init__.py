@@ -316,25 +316,25 @@ class SpanAttributes:
 
 
     # Azure AI Search — vector search attributes
-    AZURE_SEARCH_VECTOR_QUERIES_COUNT = "azure_search.search.vector_queries_count"
-    AZURE_SEARCH_VECTOR_FIELDS = "azure_search.search.vector_fields"
-    AZURE_SEARCH_VECTOR_K_NEAREST_NEIGHBORS = "azure_search.search.k_nearest_neighbors"
-    AZURE_SEARCH_VECTOR_EXHAUSTIVE = "azure_search.search.vector_exhaustive"
-    AZURE_SEARCH_VECTOR_FILTER_MODE = "azure_search.search.vector_filter_mode"
-    AZURE_SEARCH_VECTOR_QUERY_KIND = "azure_search.search.vector_query_kind"
-    AZURE_SEARCH_VECTOR_WEIGHT = "azure_search.search.vector_weight"
-    AZURE_SEARCH_VECTOR_OVERSAMPLING = "azure_search.search.vector_oversampling"
+    AZURE_AI_SEARCH_VECTOR_QUERIES_COUNT = "azure.search.search.vector_queries_count"
+    AZURE_AI_SEARCH_VECTOR_FIELDS = "azure.search.search.vector_fields"
+    AZURE_AI_SEARCH_VECTOR_K_NEAREST_NEIGHBORS = "azure.search.search.k_nearest_neighbors"
+    AZURE_AI_SEARCH_VECTOR_EXHAUSTIVE = "azure.search.search.vector_exhaustive"
+    AZURE_AI_SEARCH_VECTOR_FILTER_MODE = "azure.search.search.vector_filter_mode"
+    AZURE_AI_SEARCH_VECTOR_QUERY_KIND = "azure.search.search.vector_query_kind"
+    AZURE_AI_SEARCH_VECTOR_WEIGHT = "azure.search.search.vector_weight"
+    AZURE_AI_SEARCH_VECTOR_OVERSAMPLING = "azure.search.search.vector_oversampling"
 
     # Azure AI Search — semantic search attributes
-    AZURE_SEARCH_SEMANTIC_CONFIGURATION_NAME = "azure_search.search.semantic_configuration_name"
-    AZURE_SEARCH_QUERY_CAPTION = "azure_search.search.query_caption"
-    AZURE_SEARCH_QUERY_ANSWER = "azure_search.search.query_answer"
-    AZURE_SEARCH_SEARCH_MODE = "azure_search.search.search_mode"
-    AZURE_SEARCH_SCORING_PROFILE = "azure_search.search.scoring_profile"
-    AZURE_SEARCH_SELECT = "azure_search.search.select"
-    AZURE_SEARCH_SEARCH_FIELDS = "azure_search.search.search_fields"
-    AZURE_SEARCH_FACETS = "azure_search.search.facets"
-    AZURE_SEARCH_ORDER_BY = "azure_search.search.order_by"
+    AZURE_AI_SEARCH_SEMANTIC_CONFIGURATION_NAME = "azure.search.search.semantic_configuration_name"
+    AZURE_AI_SEARCH_QUERY_CAPTION = "azure.search.search.query_caption"
+    AZURE_AI_SEARCH_QUERY_ANSWER = "azure.search.search.query_answer"
+    AZURE_AI_SEARCH_SEARCH_MODE = "azure.search.search.search_mode"
+    AZURE_AI_SEARCH_SCORING_PROFILE = "azure.search.search.scoring_profile"
+    AZURE_AI_SEARCH_SELECT = "azure.search.search.select"
+    AZURE_AI_SEARCH_SEARCH_FIELDS = "azure.search.search.search_fields"
+    AZURE_AI_SEARCH_FACETS = "azure.search.search.facets"
+    AZURE_AI_SEARCH_ORDER_BY = "azure.search.search.order_by"
 
 
 class Events(Enum):
