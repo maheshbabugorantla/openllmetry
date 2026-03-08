@@ -12,6 +12,7 @@ from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import IndexDocumentsBatch, SearchClient
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import (
+    AnalyzeTextOptions,
     SearchFieldDataType,
     SearchIndex,
     SearchSuggester,
@@ -339,3 +340,167 @@ class TestSearchClientIntegration:
 
         # But the document body must NOT be captured
         _assert_no_content_attributes(span)
+
+
+# ---------------------------------------------------------------------------
+# TestSearchIndexClientIntegration
+# ---------------------------------------------------------------------------
+
+class TestSearchIndexClientIntegration:
+    """Integration tests for SearchIndexClient operations (index CRUD, stats, analyze)."""
+
+    @pytest.fixture(scope="class")
+    def index_client_setup(self):
+        return _make_index_client()
+
+    @pytest.fixture(scope="class", autouse=True)
+    def setup_test_index(self, index_client_setup):
+        fields = [
+            SimpleField(name="id", type=SearchFieldDataType.String, key=True),
+            SearchableField(name="name", type=SearchFieldDataType.String),
+            SearchableField(name="description", type=SearchFieldDataType.String),
+            SimpleField(name="rating", type=SearchFieldDataType.Double, filterable=True),
+        ]
+        suggesters = [SearchSuggester(name="sg", source_fields=["name"])]
+        _setup_index(index_client_setup, fields, suggesters)
+        yield
+        _teardown_index(index_client_setup)
+
+    @pytest.fixture
+    def index_client(self):
+        return _make_index_client()
+
+    # -- Index retrieval --
+
+    @pytest.mark.vcr
+    def test_list_indexes(self, exporter, index_client):
+        """list_indexes produces a span with vendor attribute."""
+        list(index_client.list_indexes())
+
+        span = _get_only_span(exporter, "azure.search.list_indexes")
+        _assert_base_span(span, "azure.search.list_indexes")
+
+    @pytest.mark.vcr
+    def test_list_index_names(self, exporter, index_client):
+        """list_index_names produces a span with vendor attribute."""
+        list(index_client.list_index_names())
+
+        span = _get_only_span(exporter, "azure.search.list_index_names")
+        _assert_base_span(span, "azure.search.list_index_names")
+
+    @pytest.mark.vcr
+    def test_get_index(self, exporter, index_client):
+        """get_index captures the index name."""
+        index_client.get_index(INTEGRATION_TEST_INDEX)
+
+        span = _get_only_span(exporter, "azure.search.get_index")
+        _assert_base_span(span, "azure.search.get_index", INTEGRATION_TEST_INDEX)
+
+    @pytest.mark.vcr
+    def test_get_index_statistics(self, exporter, index_client):
+        """get_index_statistics captures the index name."""
+        index_client.get_index_statistics(INTEGRATION_TEST_INDEX)
+
+        span = _get_only_span(exporter, "azure.search.get_index_statistics")
+        _assert_base_span(span, "azure.search.get_index_statistics", INTEGRATION_TEST_INDEX)
+
+    # -- Index CRUD --
+
+    @pytest.mark.vcr
+    def test_create_index(self, exporter, index_client):
+        """create_index captures the new index name."""
+        test_index_name = "test-create-index"
+
+        # Cassette includes a prior delete (404) then create (201)
+        try:
+            index_client.delete_index(test_index_name)
+        except Exception:
+            pass
+        exporter.clear()
+
+        fields = [
+            SimpleField(name="id", type=SearchFieldDataType.String, key=True),
+            SearchableField(name="content", type=SearchFieldDataType.String),
+        ]
+        index_client.create_index(SearchIndex(name=test_index_name, fields=fields))
+
+        try:
+            span = _get_only_span(exporter, "azure.search.create_index")
+            _assert_base_span(span, "azure.search.create_index", test_index_name)
+        finally:
+            try:
+                index_client.delete_index(test_index_name)
+            except Exception:
+                pass
+
+    @pytest.mark.vcr
+    def test_create_or_update_index(self, exporter, index_client):
+        """create_or_update_index captures the index name."""
+        test_index_name = "test-upsert-index"
+
+        fields = [
+            SimpleField(name="id", type=SearchFieldDataType.String, key=True),
+            SearchableField(name="content", type=SearchFieldDataType.String),
+        ]
+        index_client.create_or_update_index(SearchIndex(name=test_index_name, fields=fields))
+
+        try:
+            span = _get_only_span(exporter, "azure.search.create_or_update_index")
+            _assert_base_span(span, "azure.search.create_or_update_index", test_index_name)
+        finally:
+            try:
+                index_client.delete_index(test_index_name)
+            except Exception:
+                pass
+
+    @pytest.mark.vcr
+    def test_delete_index(self, exporter, index_client):
+        """delete_index captures the deleted index name."""
+        test_index_name = "test-delete-index"
+
+        # Cassette includes a prior create (201) then the delete (204)
+        fields = [SimpleField(name="id", type=SearchFieldDataType.String, key=True)]
+        try:
+            index_client.create_index(SearchIndex(name=test_index_name, fields=fields))
+        except Exception:
+            pass
+        exporter.clear()
+
+        index_client.delete_index(test_index_name)
+
+        span = _get_only_span(exporter, "azure.search.delete_index")
+        _assert_base_span(span, "azure.search.delete_index", test_index_name)
+
+    # -- Text analysis --
+
+    @pytest.mark.vcr
+    def test_analyze_text(self, exporter, index_client):
+        """analyze_text captures the index name and analyzer name."""
+        index_client.analyze_text(
+            index_name=INTEGRATION_TEST_INDEX,
+            analyze_request=AnalyzeTextOptions(
+                text="The quick brown fox",
+                analyzer_name="standard.lucene",
+            ),
+        )
+
+        span = _get_only_span(exporter, "azure.search.analyze_text")
+        _assert_base_span(span, "azure.search.analyze_text", INTEGRATION_TEST_INDEX)
+        assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_ANALYZER_NAME] == "standard.lucene"
+
+    # -- Service statistics --
+
+    @pytest.mark.vcr
+    def test_get_service_statistics(self, exporter, index_client):
+        """get_service_statistics captures document and index counts from the response."""
+        index_client.get_service_statistics()
+
+        span = _get_only_span(exporter, "azure.search.get_service_statistics")
+        _assert_base_span(span, "azure.search.get_service_statistics")
+
+        # Cassette shows indexesCount=2, verify response attributes are integers
+        doc_count = span.attributes[SpanAttributes.AZURE_AI_SEARCH_SERVICE_DOCUMENT_COUNT]
+        idx_count = span.attributes[SpanAttributes.AZURE_AI_SEARCH_SERVICE_INDEX_COUNT]
+        assert isinstance(doc_count, int)
+        assert isinstance(idx_count, int)
+        assert idx_count >= 1  # At least the integration test index exists
