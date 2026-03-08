@@ -2,9 +2,10 @@
 
 Each test verifies that a real Azure SDK call (replayed from a recorded cassette)
 produces a span with the correct name, kind, status, vendor, request attributes,
-and response attributes.
+response attributes, and content capture attributes.
 """
 
+import json
 import os
 
 import pytest
@@ -182,7 +183,7 @@ class TestSearchClientIntegration:
 
     @pytest.mark.vcr
     def test_get_document(self, exporter, search_client):
-        """get_document captures the document key."""
+        """get_document captures the document key and full document as a content attribute."""
         # Cassette includes a prior upload of doc-1, then the GET
         search_client.upload_documents([
             {"id": "doc-1", "name": "Test", "description": "Test", "rating": 4.0},
@@ -194,6 +195,14 @@ class TestSearchClientIntegration:
         span = _get_only_span(exporter, "azure.search.get_document")
         _assert_base_span(span, "azure.search.get_document", INTEGRATION_TEST_INDEX)
         assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_KEY] == "doc-1"
+
+        # Verify the full document is captured as a content attribute
+        attrs = _span_attrs(span)
+        raw = attrs[EventAttributes.DB_QUERY_RESULT_DOCUMENT.value]
+        captured_doc = json.loads(raw)
+        assert captured_doc["id"] == "doc-1"
+        assert captured_doc["name"] == "Test"
+        assert captured_doc["rating"] == 4.0
 
     @pytest.mark.vcr
     def test_get_document_count(self, exporter, search_client):
@@ -209,7 +218,7 @@ class TestSearchClientIntegration:
 
     @pytest.mark.vcr
     def test_upload_documents(self, exporter, search_client):
-        """upload_documents captures doc count and succeeded/failed counts."""
+        """upload_documents captures doc count, succeeded/failed counts, and content."""
         documents = [
             {"id": "test-1", "name": "Test Hotel 1", "description": "A test hotel", "rating": 4.0},
             {"id": "test-2", "name": "Test Hotel 2", "description": "Another test hotel", "rating": 3.5},
@@ -225,6 +234,18 @@ class TestSearchClientIntegration:
         # Response attributes — cassette shows both docs succeed with 201
         assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT] == 2
         assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_FAILED_COUNT] == 0
+
+        # Request content — each input document captured
+        attrs = _span_attrs(span)
+        doc_0 = json.loads(attrs[f"{EventAttributes.DB_QUERY_RESULT_DOCUMENT.value}.0"])
+        doc_1 = json.loads(attrs[f"{EventAttributes.DB_QUERY_RESULT_DOCUMENT.value}.1"])
+        assert doc_0["id"] == "test-1"
+        assert doc_1["id"] == "test-2"
+
+        # Response content — indexing result metadata captured
+        meta_0 = json.loads(attrs[f"{EventAttributes.DB_QUERY_RESULT_METADATA.value}.0"])
+        assert meta_0["succeeded"] is True
+        assert meta_0["status_code"] == 201
 
     @pytest.mark.vcr
     def test_merge_documents(self, exporter, search_client):
@@ -286,7 +307,7 @@ class TestSearchClientIntegration:
 
     @pytest.mark.vcr
     def test_autocomplete(self, exporter, search_client):
-        """autocomplete captures search text, suggester, and results count."""
+        """autocomplete captures search text, suggester, results count, and suggestion content."""
         # Cassette uploads auto-1 first, then autocompletes
         search_client.upload_documents([
             {"id": "auto-1", "name": "Luxury Hotel", "description": "A luxury hotel", "rating": 5.0},
@@ -303,9 +324,15 @@ class TestSearchClientIntegration:
         # Cassette returns 1 result: {"text":"luxury","queryPlusText":"luxury"}
         assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_AUTOCOMPLETE_RESULTS_COUNT] == 1
 
+        # Verify content capture — entity.0 should contain the suggestion
+        attrs = _span_attrs(span)
+        entity_0 = json.loads(attrs[f"{EventAttributes.DB_SEARCH_RESULT_ENTITY.value}.0"])
+        assert entity_0["text"] == "luxury"
+        assert entity_0["query_plus_text"] == "luxury"
+
     @pytest.mark.vcr
     def test_suggest(self, exporter, search_client):
-        """suggest captures search text, suggester, and results count."""
+        """suggest captures search text, suggester, results count, and suggestion content."""
         # Cassette uploads sug-1 first, then suggests
         search_client.upload_documents([
             {"id": "sug-1", "name": "Hot Springs Resort", "description": "A hot springs resort", "rating": 4.5},
@@ -322,6 +349,12 @@ class TestSearchClientIntegration:
         # Cassette returns suggestions
         assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_SUGGEST_RESULTS_COUNT] == len(results)
         assert span.attributes[SpanAttributes.AZURE_AI_SEARCH_SUGGEST_RESULTS_COUNT] >= 1
+
+        # Verify content capture — at least entity.0 is present and parseable
+        attrs = _span_attrs(span)
+        entity_0_raw = attrs[f"{EventAttributes.DB_SEARCH_RESULT_ENTITY.value}.0"]
+        entity_0 = json.loads(entity_0_raw)
+        assert "@search.text" in entity_0 or "id" in entity_0
 
     # -- Content toggle --
 
