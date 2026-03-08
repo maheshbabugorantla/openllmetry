@@ -501,7 +501,7 @@ def init_instrumentations(
                 should_enrich_metrics, base64_image_uploader
             ):
                 instrument_set = True
-        elif instrument == Instruments.AZURE_SEARCH:
+        elif instrument == Instruments.AZURE_AI_SEARCH:
             if init_azure_search_instrumentor():
                 instrument_set = True
         elif instrument == Instruments.BEDROCK:

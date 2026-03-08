@@ -11,7 +11,7 @@ _warned_instrumentors: Set[str] = set()
 INSTRUMENT_TO_EXTRA = {
     "openai": "openai",
     "anthropic": "anthropic",
-    "azure_search": "azure-search",
+    "azure_ai_search": "azure-search",
     "mistral": "mistralai",
     "cohere": "cohere",
     "google_generativeai": "google-generativeai",
