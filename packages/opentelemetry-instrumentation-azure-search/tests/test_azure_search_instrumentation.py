@@ -8,49 +8,49 @@ class TestSemanticConventions:
     """Verify the 15 core Azure Search span attribute constants."""
 
     def test_index_name(self):
-        assert SpanAttributes.AZURE_SEARCH_INDEX_NAME == "azure_search.index_name"
+        assert SpanAttributes.AZURE_AI_SEARCH_INDEX_NAME == "azure.search.index_name"
 
     def test_search_text(self):
-        assert SpanAttributes.AZURE_SEARCH_SEARCH_TEXT == "azure_search.search.text"
+        assert SpanAttributes.AZURE_AI_SEARCH_SEARCH_TEXT == "azure.search.search.text"
 
     def test_search_top(self):
-        assert SpanAttributes.AZURE_SEARCH_SEARCH_TOP == "azure_search.search.top"
+        assert SpanAttributes.AZURE_AI_SEARCH_SEARCH_TOP == "azure.search.search.top"
 
     def test_search_skip(self):
-        assert SpanAttributes.AZURE_SEARCH_SEARCH_SKIP == "azure_search.search.skip"
+        assert SpanAttributes.AZURE_AI_SEARCH_SEARCH_SKIP == "azure.search.search.skip"
 
     def test_search_filter(self):
-        assert SpanAttributes.AZURE_SEARCH_SEARCH_FILTER == "azure_search.search.filter"
+        assert SpanAttributes.AZURE_AI_SEARCH_SEARCH_FILTER == "azure.search.search.filter"
 
     def test_search_query_type(self):
-        assert SpanAttributes.AZURE_SEARCH_SEARCH_QUERY_TYPE == "azure_search.search.query_type"
+        assert SpanAttributes.AZURE_AI_SEARCH_SEARCH_QUERY_TYPE == "azure.search.search.query_type"
 
     def test_document_count(self):
-        assert SpanAttributes.AZURE_SEARCH_DOCUMENT_COUNT == "azure_search.document.count"
+        assert SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_COUNT == "azure.search.document.count"
 
     def test_document_key(self):
-        assert SpanAttributes.AZURE_SEARCH_DOCUMENT_KEY == "azure_search.document.key"
+        assert SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_KEY == "azure.search.document.key"
 
     def test_suggester_name(self):
-        assert SpanAttributes.AZURE_SEARCH_SUGGESTER_NAME == "azure_search.suggester_name"
+        assert SpanAttributes.AZURE_AI_SEARCH_SUGGESTER_NAME == "azure.search.suggester_name"
 
     def test_analyzer_name(self):
-        assert SpanAttributes.AZURE_SEARCH_ANALYZER_NAME == "azure_search.analyzer_name"
+        assert SpanAttributes.AZURE_AI_SEARCH_ANALYZER_NAME == "azure.search.analyzer_name"
 
     def test_search_results_count(self):
-        assert SpanAttributes.AZURE_SEARCH_SEARCH_RESULTS_COUNT == "azure_search.search.results_count"
+        assert SpanAttributes.AZURE_AI_SEARCH_SEARCH_RESULTS_COUNT == "azure.search.search.results_count"
 
     def test_document_succeeded_count(self):
-        assert SpanAttributes.AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT == "azure_search.document.succeeded_count"
+        assert SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT == "azure.search.document.succeeded_count"
 
     def test_document_failed_count(self):
-        assert SpanAttributes.AZURE_SEARCH_DOCUMENT_FAILED_COUNT == "azure_search.document.failed_count"
+        assert SpanAttributes.AZURE_AI_SEARCH_DOCUMENT_FAILED_COUNT == "azure.search.document.failed_count"
 
     def test_autocomplete_results_count(self):
-        assert SpanAttributes.AZURE_SEARCH_AUTOCOMPLETE_RESULTS_COUNT == "azure_search.autocomplete.results_count"
+        assert SpanAttributes.AZURE_AI_SEARCH_AUTOCOMPLETE_RESULTS_COUNT == "azure.search.autocomplete.results_count"
 
     def test_suggest_results_count(self):
-        assert SpanAttributes.AZURE_SEARCH_SUGGEST_RESULTS_COUNT == "azure_search.suggest.results_count"
+        assert SpanAttributes.AZURE_AI_SEARCH_SUGGEST_RESULTS_COUNT == "azure.search.suggest.results_count"
 
 
 class TestInstrumentorLifecycle:

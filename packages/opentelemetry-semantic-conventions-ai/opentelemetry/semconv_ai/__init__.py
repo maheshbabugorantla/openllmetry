@@ -278,24 +278,27 @@ class SpanAttributes:
     LANGGRAPH_COMMAND_GOTO_NODE = "langgraph.command.goto_node"
     LANGGRAPH_COMMAND_GOTO_NODES = "langgraph.command.goto_nodes"
 
+    # Azure AI Search — system identifier
+    AZURE_AI_SEARCH_DB_SYSTEM_NAME = "azure.ai_search"
+
     # Azure AI Search — core request attributes
-    AZURE_SEARCH_INDEX_NAME = "azure_search.index_name"
-    AZURE_SEARCH_SEARCH_TEXT = "azure_search.search.text"
-    AZURE_SEARCH_SEARCH_TOP = "azure_search.search.top"
-    AZURE_SEARCH_SEARCH_SKIP = "azure_search.search.skip"
-    AZURE_SEARCH_SEARCH_FILTER = "azure_search.search.filter"
-    AZURE_SEARCH_SEARCH_QUERY_TYPE = "azure_search.search.query_type"
-    AZURE_SEARCH_DOCUMENT_COUNT = "azure_search.document.count"
-    AZURE_SEARCH_DOCUMENT_KEY = "azure_search.document.key"
-    AZURE_SEARCH_SUGGESTER_NAME = "azure_search.suggester_name"
-    AZURE_SEARCH_ANALYZER_NAME = "azure_search.analyzer_name"
+    AZURE_AI_SEARCH_INDEX_NAME = "azure.search.index_name"
+    AZURE_AI_SEARCH_SEARCH_TEXT = "azure.search.search.text"
+    AZURE_AI_SEARCH_SEARCH_TOP = "azure.search.search.top"
+    AZURE_AI_SEARCH_SEARCH_SKIP = "azure.search.search.skip"
+    AZURE_AI_SEARCH_SEARCH_FILTER = "azure.search.search.filter"
+    AZURE_AI_SEARCH_SEARCH_QUERY_TYPE = "azure.search.search.query_type"
+    AZURE_AI_SEARCH_DOCUMENT_COUNT = "azure.search.document.count"
+    AZURE_AI_SEARCH_DOCUMENT_KEY = "azure.search.document.key"
+    AZURE_AI_SEARCH_SUGGESTER_NAME = "azure.search.suggester_name"
+    AZURE_AI_SEARCH_ANALYZER_NAME = "azure.search.analyzer_name"
 
     # Azure AI Search — core response attributes
-    AZURE_SEARCH_SEARCH_RESULTS_COUNT = "azure_search.search.results_count"
-    AZURE_SEARCH_DOCUMENT_SUCCEEDED_COUNT = "azure_search.document.succeeded_count"
-    AZURE_SEARCH_DOCUMENT_FAILED_COUNT = "azure_search.document.failed_count"
-    AZURE_SEARCH_AUTOCOMPLETE_RESULTS_COUNT = "azure_search.autocomplete.results_count"
-    AZURE_SEARCH_SUGGEST_RESULTS_COUNT = "azure_search.suggest.results_count"
+    AZURE_AI_SEARCH_SEARCH_RESULTS_COUNT = "azure.search.search.results_count"
+    AZURE_AI_SEARCH_DOCUMENT_SUCCEEDED_COUNT = "azure.search.document.succeeded_count"
+    AZURE_AI_SEARCH_DOCUMENT_FAILED_COUNT = "azure.search.document.failed_count"
+    AZURE_AI_SEARCH_AUTOCOMPLETE_RESULTS_COUNT = "azure.search.autocomplete.results_count"
+    AZURE_AI_SEARCH_SUGGEST_RESULTS_COUNT = "azure.search.suggest.results_count"
 
 
 class Events(Enum):
