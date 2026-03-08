@@ -158,6 +158,8 @@ def dont_throw(func):
 | `_set_suggestion_attributes` | `autocomplete`, `suggest` | `search.text`, `suggester_name` |
 | `_set_index_management_attributes` | `create/update/delete/get/list_index*` | `index_name` (positional or keyword) |
 | `_set_analyze_text_attributes` | `analyze_text` | `index_name`, `analyzer_name` (from `AnalyzeTextOptions`) |
+| `_set_vector_search_attributes` | `search` (when `vector_queries` present) | `vector_queries_count`, `vector_fields`, `k_nearest_neighbors`, `vector_query_kind`, `vector_weight`, `vector_oversampling`, `vector_filter_mode`, `vector_exhaustive` |
+| `_set_semantic_search_attributes` | `search` (when semantic params present) | `semantic_configuration_name`, `query_caption`, `query_answer`, `search_mode`, `scoring_profile`, `select`, `search_fields`, `facets`, `order_by` |
 
 All extractors are decorated with `@dont_throw` — if extraction fails, the span is still created.
 
@@ -316,6 +318,89 @@ Use `hasattr(documents, "__len__")` rather than `isinstance(documents, list)` to
 
 ---
 
+## Content Capture
+
+### How it works
+
+Content capture stores request/response payloads as **indexed span attributes** — e.g., `db.query.result.document.0`, `db.search.result.entity.1`. This mirrors the LLM pattern (`gen_ai.prompt.0.content`) and ensures content is indexed by APM backends like Elastic APM (which drops `span.add_event()` data).
+
+### `should_send_content()`, `max_content_items()`, `max_content_length()`
+
+These three helpers in `utils.py` are computed **once per span** at the top of `_sync_wrap`/`_async_wrap`:
+
+```python
+content_enabled = should_send_content()     # reads TRACELOOP_TRACE_CONTENT env var
+max_items = max_content_items()             # reads TRACELOOP_TRACE_CONTENT_MAX_ITEMS
+max_length = max_content_length()           # reads TRACELOOP_TRACE_CONTENT_MAX_LENGTH
+```
+
+They are then passed down to every content function — never re-read per item.
+
+`should_send_content()` checks `override_enable_content_tracing` from OpenTelemetry context first, then the env var. Default is `True`.
+
+### `_safe_json_dumps(obj, max_length)`
+
+Serializes an object to JSON and truncates to `max_length` characters:
+
+```python
+def _safe_json_dumps(obj, max_length):
+    try:
+        s = json.dumps(obj, default=str)
+    except Exception:
+        s = str(obj)
+    return s[:max_length] if max_length > 0 else s
+```
+
+### Content Dispatchers
+
+Two top-level dispatchers route to operation-specific content functions:
+
+| Dispatcher | Called From | Routes To |
+|-----------|------------|-----------|
+| `_set_request_content_attributes` | `_sync_wrap` / `_async_wrap` (before call) | `_set_search_vector_embeddings_attributes`, `_set_document_batch_request_content_attributes`, `_set_index_documents_request_content_attributes` |
+| `_set_response_content_attributes` | `_sync_wrap` / `_async_wrap` (after call) | `_set_get_document_content_attribute`, `_set_autocomplete_content_attributes`, `_set_suggest_content_attributes`, `_set_document_batch_response_all`, `_set_index_documents_response_all` |
+
+### Per-Operation Content Functions
+
+| Function | Operation | Attribute Pattern |
+|----------|-----------|------------------|
+| `_set_search_vector_embeddings_attributes` | `search` (request) | `db.search.embeddings.vector.{i}` |
+| `_set_document_batch_request_content_attributes` | `upload/merge/delete_documents` (request) | `db.query.result.document.{i}` |
+| `_set_index_documents_request_content_attributes` | `index_documents` (request) | `db.query.result.document.{i}` |
+| `_set_get_document_content_attribute` | `get_document` (response) | `db.query.result.document` |
+| `_set_autocomplete_content_attributes` | `autocomplete` (response) | `db.search.result.entity.{i}` |
+| `_set_suggest_content_attributes` | `suggest` (response) | `db.search.result.entity.{i}` |
+| `_set_indexing_response_single_pass` (updated) | `upload/merge/delete/index_documents` (response) | `db.query.result.id.{i}`, `db.query.result.metadata.{i}` |
+
+`_set_indexing_response_single_pass` was extended to accept `content_enabled`, `max_items`, and `max_length` parameters so it can write content attributes in the same single pass that counts succeeded/failed.
+
+### `EventAttributes` Enum
+
+`EventAttributes` in `semconv_ai` defines the canonical attribute name prefixes:
+
+```python
+class EventAttributes(Enum):
+    DB_QUERY_RESULT_ID       = "db.query.result.id"
+    DB_QUERY_RESULT_METADATA = "db.query.result.metadata"
+    DB_QUERY_RESULT_DOCUMENT = "db.query.result.document"
+    DB_SEARCH_EMBEDDINGS_VECTOR = "db.search.embeddings.vector"
+    DB_SEARCH_RESULT_ENTITY  = "db.search.result.entity"
+```
+
+Use `.value` to get the string and append `.{i}` for indexed attributes:
+```python
+span.set_attribute(f"{EventAttributes.DB_QUERY_RESULT_DOCUMENT.value}.{i}", content)
+```
+
+### Content Capture Best Practices
+
+- Always check `content_enabled` before serializing — skip expensive `json.dumps` if not needed.
+- Pass `max_items` and `max_length` as parameters; do not re-read env vars inside per-item loops.
+- Use `_safe_json_dumps` for all attribute values — never raw `str(obj)` without truncation.
+- `search()` result documents are intentionally NOT captured — consuming `SearchItemPaged` would exhaust the iterator before user code can iterate it.
+
+---
+
 ## Pattern 3 — Index Management (SearchIndexClient)
 
 For methods that take an index object as the first argument:
@@ -352,5 +437,6 @@ Use `getattr(obj, "field", None)` to safely read from SDK model objects without 
 ## Notes
 
 - **Content capture** (`should_send_content`) is stubbed to `False` in this release. Full content capture (request/response documents as indexed span attributes) will be added in a future release.
-- **Async support** is now available via `_async_wrap` for `SearchClient.aio` and `SearchIndexClient.aio` methods.
+- **Async support** is available via `_async_wrap` for `SearchClient.aio` and `SearchIndexClient.aio` methods.
+- **Content capture** is now active — controlled by `TRACELOOP_TRACE_CONTENT` (default: `true`). Use `TRACELOOP_TRACE_CONTENT_MAX_ITEMS` and `TRACELOOP_TRACE_CONTENT_MAX_LENGTH` to tune volume.
 - **Tests** use `MockSearchClient` / `MockSearchIndexClient` with manual span creation rather than full SDK wrapping. VCR cassettes are not needed for unit tests; they are used for integration-level cassette tests.

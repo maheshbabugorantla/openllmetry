@@ -26,7 +26,11 @@ from azure.search.documents.indexes.models import (
     SearchFieldDataType,
     SearchIndex,
     SimpleField,
+    VectorSearch,
+    HnswAlgorithmConfiguration,
+    VectorSearchProfile,
 )
+from azure.search.documents.models import VectorizedQuery
 from azure.search.documents.models import AutocompleteMode
 from opentelemetry.instrumentation.azure_search import AzureSearchInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
@@ -60,6 +64,12 @@ index_client = SearchIndexClient(
 
 # --- Sample data ---
 
+# Content capture is controlled by environment variables:
+#   TRACELOOP_TRACE_CONTENT=true           (default: true)
+#   TRACELOOP_TRACE_CONTENT_MAX_ITEMS=100  (max items per span)
+#   TRACELOOP_TRACE_CONTENT_MAX_LENGTH=16384 (max chars per attribute)
+
+# Placeholder 4-dimension embeddings (replace with real embeddings in production)
 HOTELS = [
     {
         "hotel_id": "1",
@@ -68,6 +78,7 @@ HOTELS = [
         "category": "Luxury",
         "rating": 4.8,
         "tags": ["wifi", "pool", "spa"],
+        "description_vector": [0.12, 0.34, 0.56, 0.78],
     },
     {
         "hotel_id": "2",
@@ -76,6 +87,7 @@ HOTELS = [
         "category": "Budget",
         "rating": 3.5,
         "tags": ["wifi", "parking"],
+        "description_vector": [0.11, 0.22, 0.33, 0.44],
     },
     {
         "hotel_id": "3",
@@ -84,6 +96,7 @@ HOTELS = [
         "category": "Resort",
         "rating": 4.6,
         "tags": ["beach", "pool", "restaurant"],
+        "description_vector": [0.55, 0.66, 0.77, 0.88],
     },
 ]
 
@@ -129,6 +142,52 @@ def demo_search():
     )
     for r in results:
         print(f"  {r['hotel_name']} (rating={r.get('rating')})")
+
+
+def demo_vector_search():
+    """Vector search — generates azure.search.search span with vector_queries attributes.
+
+    Requires a vector field 'description_vector' configured on the index.
+    """
+    print("\n--- vector search ---")
+    try:
+        query_vector = [0.12, 0.35, 0.55, 0.80]  # Placeholder — use real embeddings
+        results = client.search(
+            search_text=None,
+            vector_queries=[
+                VectorizedQuery(
+                    vector=query_vector,
+                    k_nearest_neighbors=3,
+                    fields="description_vector",
+                )
+            ],
+        )
+        for r in results:
+            print(f"  {r['hotel_name']}")
+    except Exception as e:
+        print(f"  Skipped (vector field not configured): {e}")
+
+
+def demo_hybrid_search():
+    """Hybrid (text + vector) search — generates azure.search.search span."""
+    print("\n--- hybrid search ---")
+    try:
+        query_vector = [0.12, 0.35, 0.55, 0.80]
+        results = client.search(
+            search_text="luxury",
+            vector_queries=[
+                VectorizedQuery(
+                    vector=query_vector,
+                    k_nearest_neighbors=3,
+                    fields="description_vector",
+                )
+            ],
+            top=5,
+        )
+        for r in results:
+            print(f"  {r['hotel_name']}")
+    except Exception as e:
+        print(f"  Skipped (vector field not configured): {e}")
 
 
 def demo_autocomplete():
@@ -242,6 +301,8 @@ if __name__ == "__main__":
     demo_get_document()
     demo_get_document_count()
     demo_search()
+    demo_vector_search()
+    demo_hybrid_search()
     demo_merge_documents()
     demo_autocomplete()
     demo_suggest()

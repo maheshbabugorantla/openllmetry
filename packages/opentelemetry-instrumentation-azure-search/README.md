@@ -88,6 +88,65 @@ Operation-specific attributes:
 | `AZURE_AI_SEARCH_ANALYZER_NAME` | `azure.search.analyzer_name` | `analyze_text` |
 | `AZURE_AI_SEARCH_SERVICE_DOCUMENT_COUNT` | `azure.search.service.document_count` | `get_service_statistics` (response) |
 | `AZURE_AI_SEARCH_SERVICE_INDEX_COUNT` | `azure.search.service.index_count` | `get_service_statistics` (response) |
+| `AZURE_AI_SEARCH_VECTOR_QUERIES_COUNT` | `azure.search.search.vector_queries_count` | `search` with `vector_queries` |
+| `AZURE_AI_SEARCH_VECTOR_FIELDS` | `azure.search.search.vector_fields` | `search` with `vector_queries` |
+| `AZURE_AI_SEARCH_VECTOR_K_NEAREST_NEIGHBORS` | `azure.search.search.k_nearest_neighbors` | `search` with `vector_queries` |
+| `AZURE_AI_SEARCH_VECTOR_QUERY_KIND` | `azure.search.search.vector_query_kind` | `search` with `vector_queries` |
+| `AZURE_AI_SEARCH_VECTOR_WEIGHT` | `azure.search.search.vector_weight` | `search` with `vector_queries` |
+| `AZURE_AI_SEARCH_VECTOR_OVERSAMPLING` | `azure.search.search.vector_oversampling` | `search` with `vector_queries` |
+| `AZURE_AI_SEARCH_VECTOR_FILTER_MODE` | `azure.search.search.vector_filter_mode` | `search` with `vector_queries` |
+| `AZURE_AI_SEARCH_VECTOR_EXHAUSTIVE` | `azure.search.search.vector_exhaustive` | `search` with `vector_queries` |
+| `AZURE_AI_SEARCH_SEMANTIC_CONFIGURATION_NAME` | `azure.search.search.semantic_configuration_name` | `search` with semantic configuration |
+| `AZURE_AI_SEARCH_QUERY_CAPTION` | `azure.search.search.query_caption` | `search` with semantic search |
+| `AZURE_AI_SEARCH_QUERY_ANSWER` | `azure.search.search.query_answer` | `search` with semantic search |
+| `AZURE_AI_SEARCH_SEARCH_MODE` | `azure.search.search.search_mode` | `search` |
+| `AZURE_AI_SEARCH_SCORING_PROFILE` | `azure.search.search.scoring_profile` | `search` |
+| `AZURE_AI_SEARCH_SELECT` | `azure.search.search.select` | `search` |
+| `AZURE_AI_SEARCH_SEARCH_FIELDS` | `azure.search.search.search_fields` | `search` |
+| `AZURE_AI_SEARCH_FACETS` | `azure.search.search.facets` | `search` |
+| `AZURE_AI_SEARCH_ORDER_BY` | `azure.search.search.order_by` | `search` |
+
+## Content Capture
+
+By default, request and response content (documents, autocomplete suggestions, vector embeddings) is captured as **indexed span attributes** — e.g., `db.query.result.document.0`, `db.search.result.entity.0`. This follows the same pattern as LLM instrumentations (`gen_ai.prompt.0.content`) and ensures content is visible in APM backends like Elastic APM.
+
+### Configuration
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `TRACELOOP_TRACE_CONTENT` | `true` | Enable/disable content capture |
+| `TRACELOOP_TRACE_CONTENT_MAX_ITEMS` | `100` | Max items captured per span (documents, suggestions, etc.) |
+| `TRACELOOP_TRACE_CONTENT_MAX_LENGTH` | `16384` | Max characters per serialized content attribute |
+
+Accepted truthy values for `TRACELOOP_TRACE_CONTENT`: `true`, `1`, `yes`, `on` (case-insensitive).
+
+### Per-Request Override
+
+```python
+from opentelemetry import context as context_api
+
+ctx = context_api.set_value("override_enable_content_tracing", True)
+token = context_api.attach(ctx)
+try:
+    result = client.get_document(key="hotel-1")
+finally:
+    context_api.detach(token)
+```
+
+### What Content is Captured
+
+| Operation | Attribute Pattern | Content |
+|-----------|------------------|---------|
+| `get_document()` | `db.query.result.document` | Full document JSON |
+| `autocomplete()` | `db.search.result.entity.{i}` | Each suggestion (text + query_plus_text) |
+| `suggest()` | `db.search.result.entity.{i}` | Each suggestion item JSON |
+| `upload/merge/delete_documents()` | `db.query.result.document.{i}` (request) | Each input document |
+| `upload/merge/delete_documents()` | `db.query.result.id.{i}`, `db.query.result.metadata.{i}` (response) | Document key + result metadata |
+| `index_documents()` | `db.query.result.document.{i}` (request) | Each batch action |
+| `index_documents()` | `db.query.result.id.{i}`, `db.query.result.metadata.{i}` (response) | Document key + result metadata |
+| `search()` with `vector_queries` | `db.search.embeddings.vector.{i}` | Vector or text from each vector query |
+
+> **Note:** `search()` result documents are not captured because `SearchItemPaged` is a lazy iterator — consuming it would break user code.
 
 ## Async Usage
 
