@@ -338,8 +338,8 @@ class SpanAttributes:
 
 
     # Azure AI Search — synonym map attributes
-    AZURE_SEARCH_SYNONYM_MAP_NAME = "azure_search.synonym_map.name"
-    AZURE_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT = "azure_search.synonym_map.synonyms_count"
+    AZURE_AI_SEARCH_SYNONYM_MAP_NAME = "azure.search.synonym_map.name"
+    AZURE_AI_SEARCH_SYNONYM_MAP_SYNONYMS_COUNT = "azure.search.synonym_map.synonyms_count"
 
 
 class Events(Enum):
